@@ -1,0 +1,17 @@
+{
+  "backend": {
+    "api_drillholes_response_ms": 500,
+    "api_metadata_response_ms": 200,
+    "api_drillholes_payload_bytes": 200000,
+    "quality_report_ms": 200,
+    "startup_load_ms": 1000
+  },
+  "frontend": {
+    "bundle_size_kb": 500,
+    "initial_render_ms": 3000
+  },
+  "e2e": {
+    "full_load_ms": 5000,
+    "click_response_ms": 500
+  }
+}
