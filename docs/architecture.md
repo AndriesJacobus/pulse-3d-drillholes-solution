@@ -29,7 +29,7 @@ FastAPI Backend
 | `models.py` | Pydantic models for input records (CollarRecord, InterceptRecord) and API responses (DrillholeResponse, MetadataResponse). Validators enforce domain rules at parse time. |
 | `desurvey.py` | Converts collar position + dip + azimuth + depth into 3D coordinates. Handles coordinate centering and axis mapping for Three.js. |
 | `quality.py` | Dataset-level quality checks run at startup. Spatial outliers, grade outliers, completeness, consistency, domain rules, near-duplicate detection. |
-| `config.py` | Application settings. Data paths, CORS origins (env-configurable), sample interval. |
+| `config.py` | Application settings. Data paths, CORS origins (env-configurable), project name, sample interval. |
 | `main.py` | FastAPI app with lifespan startup. Five endpoints. All data loaded and desurveyed once at startup, cached on `app.state`. |
 
 ### Startup flow
@@ -99,10 +99,11 @@ A standalone CLI script (`scripts/analyse_data.py`) provides deeper statistical 
 
 ### Testing
 
-74 tests across 7 suites:
+93 tests across 8 suites, with 98% code coverage enforced via `pytest-cov` (threshold: 90%):
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
+| `test_models.py` | 19 | Pydantic validator boundaries: dip, azimuth, total_depth, grade, depth ordering |
 | `test_desurvey.py` | 20 | Vertical, horizontal, angled holes; centroid; scene coords; intercept positions |
 | `test_loader.py` | 13 | Valid/invalid CSV; orphan intercepts; empty fields; whitespace; real data |
 | `test_quality.py` | 12 | Each quality check; specific findings (CVEX028, STEX014); full report |
@@ -111,7 +112,7 @@ A standalone CLI script (`scripts/analyse_data.py`) provides deeper statistical 
 | `test_analyse_script.py` | 6 | Script runs; detects outliers; grade/spatial stats; error handling |
 | `conftest.py` | 1 | MetricsCollector fixture with version-controlled budgets |
 
-Performance metrics are version-controlled in `metrics/`. Each test run writes measured values against hard budgets defined in `metrics/budgets.json`.
+Performance metrics are version-controlled in `metrics/`. Each test run writes measured values against hard budgets defined in `metrics/budgets.json`. Coverage is enforced at 90% minimum via `pytest-cov` in `pyproject.toml`.
 
 ### Docker
 

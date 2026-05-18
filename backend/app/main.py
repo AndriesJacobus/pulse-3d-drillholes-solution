@@ -5,7 +5,14 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from app.config import COLLARS_PATH, CORS_ORIGINS, INTERCEPTS_PATH, PDF_PATH, SAMPLE_INTERVAL_M
+from app.config import (
+    COLLARS_PATH,
+    CORS_ORIGINS,
+    INTERCEPTS_PATH,
+    PDF_PATH,
+    PROJECT_NAME,
+    SAMPLE_INTERVAL_M,
+)
 from app.desurvey import (
     compute_centroid,
     compute_intercept_positions,
@@ -94,7 +101,7 @@ def build_metadata(
 ) -> MetadataResponse:
     grades = [i.grade for i in intercepts]
     return MetadataResponse(
-        project_name="Norseman Gold Project",
+        project_name=PROJECT_NAME,
         prospects=sorted({c.prospect for c in collars}),
         total_holes=len(collars),
         total_intercepts=len(intercepts),

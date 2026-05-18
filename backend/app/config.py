@@ -14,4 +14,6 @@ CORS_ORIGINS: list[str] = (
     [o.strip() for o in _env_origins.split(",") if o.strip()] if _env_origins else _default_origins
 )
 
+PROJECT_NAME = os.environ.get("PROJECT_NAME", "Comet Vale Gold Project")
+
 SAMPLE_INTERVAL_M = 5.0
