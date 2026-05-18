@@ -49,6 +49,12 @@ Pulse Intelligence's business is extracting structured data from mining document
 
 CSV reading is isolated in `loader.py` behind `load_collars()` and `load_intercepts()`. No other module touches CSV. In production, swapping CSV for PostgreSQL means rewriting `loader.py` internals. The Pydantic models, desurvey engine, quality checks, and API routes remain unchanged. This is the most important seam in the architecture because it encapsulates the biggest POC-to-production change.
 
+### Full CSV schema in Pydantic models
+
+CollarRecord and InterceptRecord carry all columns from the source CSV, including fields the backend does not currently use (latitude, longitude, hole_type, sampling_type, drilling_purpose, etc.). The alternative was trimming models to only the fields used by the desurveying and quality pipelines.
+
+Kept the full schema because: the data is served to the frontend, which may need these fields for display (e.g. hole_type in the info panel, drilling dates for context). Trimming now and adding back later means changing the model, the loader, and the tests. Loading them upfront costs nothing (31 rows) and keeps the models as a faithful representation of the source data.
+
 ### CORS from environment variable
 
 Hardcoded localhost origins work for development but not deployment. `CORS_ORIGINS` reads from an environment variable with localhost defaults. On Cloud Run, the deploy script sets the production origin.

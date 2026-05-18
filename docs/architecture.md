@@ -99,16 +99,17 @@ A standalone CLI script (`scripts/analyse_data.py`) provides deeper statistical 
 
 ### Testing
 
-69 tests across 6 suites:
+74 tests across 7 suites:
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
-| `test_desurvey.py` | 18 | Vertical, horizontal, angled holes; centroid; scene coords; intercept positions |
+| `test_desurvey.py` | 20 | Vertical, horizontal, angled holes; centroid; scene coords; intercept positions |
 | `test_loader.py` | 13 | Valid/invalid CSV; orphan intercepts; empty fields; whitespace; real data |
 | `test_quality.py` | 12 | Each quality check; specific findings (CVEX028, STEX014); full report |
-| `test_api.py` | 14 | All endpoints; response shapes; CORS allowed/disallowed |
+| `test_api.py` | 17 | All endpoints; response shapes; error paths (404); CORS allowed/disallowed/preflight |
 | `test_performance.py` | 5 | Response times; payload size; startup load. Budgets enforced from `metrics/budgets.json` |
 | `test_analyse_script.py` | 6 | Script runs; detects outliers; grade/spatial stats; error handling |
+| `conftest.py` | 1 | MetricsCollector fixture with version-controlled budgets |
 
 Performance metrics are version-controlled in `metrics/`. Each test run writes measured values against hard budgets defined in `metrics/budgets.json`.
 

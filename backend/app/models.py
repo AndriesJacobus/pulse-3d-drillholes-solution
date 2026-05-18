@@ -118,6 +118,19 @@ class GeoCentroid(BaseModel):
     rl: float
 
 
+class QualityFindingResponse(BaseModel):
+    severity: str
+    category: str
+    code: str
+    message: str
+    affected_rows: list[str]
+
+
+class DataQualityResponse(BaseModel):
+    summary: dict[str, int]
+    findings: list[QualityFindingResponse]
+
+
 class MetadataResponse(BaseModel):
     project_name: str
     prospects: list[str]

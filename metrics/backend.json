@@ -1,16 +1,16 @@
 {
-  "timestamp": "2026-05-18T21:44:47Z",
-  "git_sha": "b837671",
+  "timestamp": "2026-05-18T21:53:49Z",
+  "git_sha": "3b49ce3",
   "suite": "backend",
   "pass": true,
   "metrics": {
     "api_drillholes_response_ms": {
-      "value": 0.61,
+      "value": 0.57,
       "budget": 50,
       "pass": true
     },
     "api_metadata_response_ms": {
-      "value": 0.24,
+      "value": 0.23,
       "budget": 20,
       "pass": true
     },
@@ -20,12 +20,12 @@
       "pass": true
     },
     "quality_report_ms": {
-      "value": 0.39,
+      "value": 0.37,
       "budget": 50,
       "pass": true
     },
     "startup_load_ms": {
-      "value": 0.33,
+      "value": 0.34,
       "budget": 100,
       "pass": true
     }

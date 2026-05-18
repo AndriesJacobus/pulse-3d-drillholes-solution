@@ -1,6 +1,5 @@
 import logging
 from contextlib import asynccontextmanager
-from dataclasses import asdict
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,11 +15,13 @@ from app.desurvey import (
 from app.loader import load_collars, load_intercepts
 from app.models import (
     CollarRecord,
+    DataQualityResponse,
     DrillholeResponse,
     GeoCentroid,
     InterceptRecord,
     InterceptResponse,
     MetadataResponse,
+    QualityFindingResponse,
 )
 from app.quality import QualityReport, run_quality_report
 
@@ -32,7 +33,7 @@ def build_drillhole_responses(
     intercepts: list[InterceptRecord],
     centroid: tuple[float, float, float],
 ) -> list[DrillholeResponse]:
-    intercepts_by_hole: dict[str, list] = {}
+    intercepts_by_hole: dict[str, list[InterceptRecord]] = {}
     for i in intercepts:
         intercepts_by_hole.setdefault(i.hole_code, []).append(i)
 
@@ -153,10 +154,19 @@ async def get_source_pdf():
     return FileResponse(PDF_PATH, media_type="application/pdf", filename="source.pdf")
 
 
-@app.get("/api/data-quality")
+@app.get("/api/data-quality", response_model=DataQualityResponse)
 async def get_data_quality(request: Request):
     report: QualityReport = request.app.state.quality_report
-    return {
-        "summary": report.summary,
-        "findings": [asdict(f) for f in report.findings],
-    }
+    return DataQualityResponse(
+        summary=report.summary,
+        findings=[
+            QualityFindingResponse(
+                severity=f.severity,
+                category=f.category,
+                code=f.code,
+                message=f.message,
+                affected_rows=f.affected_rows,
+            )
+            for f in report.findings
+        ],
+    )
