@@ -39,6 +39,7 @@ def to_scene_coords(
     rl: float,
     centroid: tuple[float, float, float],
 ) -> Point3D:
+    # Three.js Y-up: X=east, Y=elevation, Z=-north (north into screen)
     return Point3D(
         x=east - centroid[0],
         y=rl - centroid[2],

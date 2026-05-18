@@ -119,6 +119,17 @@ class TestDataQualityEndpoint:
         assert "CVEX028" in spatial[0]["affected_rows"]
 
 
+class TestErrorPaths:
+    async def test_missing_pdf_returns_404(self, client, tmp_path, monkeypatch):
+        monkeypatch.setattr("app.main.PDF_PATH", tmp_path / "nonexistent.pdf")
+        response = await client.get("/api/source-pdf")
+        assert response.status_code == 404
+
+    async def test_unknown_endpoint_returns_404(self, client):
+        response = await client.get("/api/nonexistent")
+        assert response.status_code == 404
+
+
 class TestCorsHeaders:
     async def test_cors_allowed_origin(self, client):
         response = await client.get(
@@ -135,3 +146,15 @@ class TestCorsHeaders:
         )
         assert response.status_code == 200
         assert "access-control-allow-origin" not in response.headers
+
+    async def test_cors_preflight(self, client):
+        response = await client.options(
+            "/api/health",
+            headers={
+                "Origin": "http://localhost:5173",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        assert response.status_code == 200
+        assert response.headers.get("access-control-allow-origin") == "http://localhost:5173"
+        assert "GET" in response.headers.get("access-control-allow-methods", "")

@@ -167,3 +167,20 @@ class TestComputeInterceptPositions:
         start, end = compute_intercept_positions(collar, 20, 30, centroid)
         assert start.y == pytest.approx(-20, abs=0.01)
         assert end.y == pytest.approx(-30, abs=0.01)
+
+    def test_horizontal_east_intercept(self):
+        collar = _collar(east=0, north=0, rl=100, dip=0, azimuth=90, total_depth=100)
+        centroid = (0, 0, 100)
+        start, end = compute_intercept_positions(collar, 10, 20, centroid)
+        assert start.x == pytest.approx(10, abs=0.01)
+        assert end.x == pytest.approx(20, abs=0.01)
+        assert start.y == pytest.approx(0, abs=0.01)
+        assert end.y == pytest.approx(0, abs=0.01)
+
+    def test_angled_intercept_positions(self):
+        collar = _collar(east=0, north=0, rl=100, dip=-60, azimuth=90, total_depth=100)
+        centroid = (0, 0, 100)
+        start, end = compute_intercept_positions(collar, 40, 50, centroid)
+        assert start.x < end.x
+        assert start.y > end.y
+        assert abs(start.y) > abs(start.x)
