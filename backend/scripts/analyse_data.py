@@ -330,10 +330,13 @@ def compute_grade_statistics(intercepts: list[dict]) -> dict:
         "mean": round(statistics.mean(grades), 2),
         "median": round(statistics.median(grades), 2),
         "stdev": round(statistics.stdev(grades), 2) if len(grades) > 1 else 0,
-        "percentiles": {
-            "p25": round(sorted(grades)[len(grades) // 4], 2),
-            "p75": round(sorted(grades)[3 * len(grades) // 4], 2),
-        },
+        "percentiles": dict(
+            zip(
+                ["p25", "p50", "p75"],
+                [round(q, 2) for q in statistics.quantiles(grades, n=4)],
+                strict=True,
+            )
+        ),
     }
 
 

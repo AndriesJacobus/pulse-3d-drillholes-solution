@@ -112,11 +112,17 @@ class DrillholeResponse(BaseModel):
     intercepts: list[InterceptResponse]
 
 
+class GeoCentroid(BaseModel):
+    east: float
+    north: float
+    rl: float
+
+
 class MetadataResponse(BaseModel):
     project_name: str
     prospects: list[str]
     total_holes: int
     total_intercepts: int
     grade_range: dict[str, float]
-    centroid: Point3D
+    centroid: GeoCentroid
     commodities: list[str]

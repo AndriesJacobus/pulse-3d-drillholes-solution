@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
@@ -15,10 +15,12 @@ from app.desurvey import (
 )
 from app.loader import load_collars, load_intercepts
 from app.models import (
+    CollarRecord,
     DrillholeResponse,
+    GeoCentroid,
+    InterceptRecord,
     InterceptResponse,
     MetadataResponse,
-    Point3D,
 )
 from app.quality import QualityReport, run_quality_report
 
@@ -26,9 +28,9 @@ logger = logging.getLogger(__name__)
 
 
 def build_drillhole_responses(
-    collars,
-    intercepts,
-    centroid,
+    collars: list[CollarRecord],
+    intercepts: list[InterceptRecord],
+    centroid: tuple[float, float, float],
 ) -> list[DrillholeResponse]:
     intercepts_by_hole: dict[str, list] = {}
     for i in intercepts:
@@ -84,7 +86,11 @@ def build_drillhole_responses(
     return responses
 
 
-def build_metadata(collars, intercepts, centroid) -> MetadataResponse:
+def build_metadata(
+    collars: list[CollarRecord],
+    intercepts: list[InterceptRecord],
+    centroid: tuple[float, float, float],
+) -> MetadataResponse:
     grades = [i.grade for i in intercepts]
     return MetadataResponse(
         project_name="Norseman Gold Project",
@@ -95,7 +101,7 @@ def build_metadata(collars, intercepts, centroid) -> MetadataResponse:
             "min": min(grades) if grades else 0,
             "max": max(grades) if grades else 0,
         },
-        centroid=Point3D(x=centroid[0], y=centroid[1], z=centroid[2]),
+        centroid=GeoCentroid(east=centroid[0], north=centroid[1], rl=centroid[2]),
         commodities=sorted({i.commodity_symbol for i in intercepts}),
     )
 
@@ -142,6 +148,8 @@ async def get_drillholes(request: Request):
 
 @app.get("/api/source-pdf")
 async def get_source_pdf():
+    if not PDF_PATH.exists():
+        raise HTTPException(status_code=404, detail="Source PDF not found")
     return FileResponse(PDF_PATH, media_type="application/pdf", filename="source.pdf")
 
 

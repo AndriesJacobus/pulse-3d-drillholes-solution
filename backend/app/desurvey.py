@@ -1,16 +1,8 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
 
 from app.models import CollarRecord, Point3D
-
-
-@dataclass
-class SurveyStation:
-    depth: float
-    dip: float
-    azimuth: float
 
 
 def compute_point_at_depth(

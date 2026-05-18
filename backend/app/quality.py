@@ -218,15 +218,9 @@ def check_near_duplicates(
     collars: list[CollarRecord], distance_m: float = 5.0
 ) -> list[QualityFinding]:
     findings: list[QualityFinding] = []
-    checked: set[tuple[str, str]] = set()
 
     for i, a in enumerate(collars):
         for b in collars[i + 1 :]:
-            pair = tuple(sorted([a.hole_code, b.hole_code]))
-            if pair in checked:
-                continue
-            checked.add(pair)
-
             dist = math.sqrt((a.east - b.east) ** 2 + (a.north - b.north) ** 2)
             if dist < distance_m:
                 findings.append(

@@ -1,10 +1,10 @@
 {
   "backend": {
-    "api_drillholes_response_ms": 500,
-    "api_metadata_response_ms": 200,
-    "api_drillholes_payload_bytes": 200000,
-    "quality_report_ms": 200,
-    "startup_load_ms": 1000
+    "api_drillholes_response_ms": 50,
+    "api_metadata_response_ms": 20,
+    "api_drillholes_payload_bytes": 150000,
+    "quality_report_ms": 50,
+    "startup_load_ms": 100
   },
   "frontend": {
     "bundle_size_kb": 500,

@@ -13,7 +13,7 @@ def _parse_optional_int(value: str) -> int | None:
     value = value.strip()
     if not value:
         return None
-    return int(value)
+    return int(float(value))
 
 
 def _parse_optional_float(value: str) -> float | None:

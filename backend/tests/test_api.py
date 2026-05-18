@@ -39,12 +39,15 @@ class TestMetadataEndpoint:
         assert "Cheer" in data["prospects"]
         assert "Sovereign" in data["prospects"]
 
-    async def test_centroid_present(self, client):
+    async def test_centroid_is_geographic(self, client):
         response = await client.get("/api/metadata")
         data = response.json()
-        assert "x" in data["centroid"]
-        assert "y" in data["centroid"]
-        assert "z" in data["centroid"]
+        centroid = data["centroid"]
+        assert "east" in centroid
+        assert "north" in centroid
+        assert "rl" in centroid
+        assert centroid["east"] > 300000
+        assert centroid["north"] > 6000000
 
 
 class TestDrillholesEndpoint:
@@ -114,3 +117,21 @@ class TestDataQualityEndpoint:
         spatial = [f for f in findings if f["code"] == "SPATIAL_OUTLIER"]
         assert len(spatial) >= 1
         assert "CVEX028" in spatial[0]["affected_rows"]
+
+
+class TestCorsHeaders:
+    async def test_cors_allowed_origin(self, client):
+        response = await client.get(
+            "/api/health",
+            headers={"Origin": "http://localhost:5173"},
+        )
+        assert response.status_code == 200
+        assert response.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+    async def test_cors_disallowed_origin(self, client):
+        response = await client.get(
+            "/api/health",
+            headers={"Origin": "http://evil.example.com"},
+        )
+        assert response.status_code == 200
+        assert "access-control-allow-origin" not in response.headers
