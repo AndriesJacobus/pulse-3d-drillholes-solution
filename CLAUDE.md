@@ -17,12 +17,21 @@ Solution repo for the Pulse Intelligence Partners full-stack 3D drillholes chall
 - No AI attribution anywhere
 - Direct, specific, concise
 
+## Stack
+
+- **Backend:** FastAPI (Python 3.12), Pydantic v2, stdlib csv + math, uvicorn
+- **Frontend:** React 18 + TypeScript + Vite, Three.js via React Three Fiber + drei
+- **State:** Zustand (scene state), TanStack Query (data fetching)
+- **Styling:** Tailwind CSS v4
+- **Colour:** d3-scale + d3-scale-chromatic
+- **Testing:** pytest + httpx (backend), Vitest + React Testing Library (frontend)
+- **Lint:** Ruff (backend), ESLint + Prettier (frontend)
+- **Deploy:** Firebase Hosting (frontend) + GCP Cloud Run (backend)
+
 ## Testing
 
 - Test behaviour, not implementation
 - Unit tests as default; integration/E2E where boundaries matter
 - Every PR includes tests for new code
-
-## Stack
-
-Will be populated once the challenge requirements are confirmed.
+- Backend: `uv run pytest`
+- Frontend: `npm run test`
