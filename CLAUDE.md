@@ -5,10 +5,13 @@ Solution repo for the Pulse Intelligence Partners full-stack 3D drillholes chall
 ## Coding Standards
 
 - Production-quality code throughout
+- See `docs/coding-standards.md` for the full standards reference (both BE and FE)
 - Comments only where logic is genuinely unclear from reading the code
 - Follow separation of concerns
 - Tests for all new code with proper coverage
 - European English (organisation, behavioural, colour, realise)
+- Backend lint: `cd backend && uv run ruff check . && uv run ruff format --check .`
+- Frontend lint: `cd frontend && npx eslint src/ && npx prettier --check src/`
 
 ## Writing Style
 
