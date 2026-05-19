@@ -4,7 +4,7 @@ How drillhole data flows from raw CSV through the backend into 3D-ready API resp
 
 ## Source data
 
-Two CSV files extracted from an ASX announcement for the Norseman Gold Project:
+Two CSV files extracted from an ASX announcement for the Comet Vale Gold Project:
 
 - **drillhole_collars.csv** (31 rows): hole location, orientation, depth. MGA Zone 51 projected coordinates.
 - **drill_intercepts.csv** (14 rows): mineralised intervals with gold grade.

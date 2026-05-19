@@ -117,3 +117,58 @@ Performance metrics are version-controlled in `metrics/`. Each test run writes m
 ### Docker
 
 `python:3.12-slim` base, `uv` for dependency management, non-root user. The image includes only production code and data (tests, scripts, and metrics excluded via `.dockerignore`).
+
+## Frontend (Phase 2)
+
+### Stack
+
+React 19 + TypeScript + Vite. Three.js via React Three Fiber (R3F) and drei. Zustand for scene state, TanStack Query for server data. Tailwind CSS v4 with custom design tokens. Vitest + React Testing Library for tests.
+
+### Component hierarchy
+
+```
+App
+├── Header                    (project name, hole/intercept counts)
+├── Scene                     (loading/error states, R3F Canvas)
+│   └── Canvas
+│       ├── Lights            (ambient 0.6 + directional 0.4)
+│       ├── OrbitControls     (orbit, zoom, pan)
+│       └── Bounds            (auto-frames camera to geometry)
+│           └── DrillholeGroup
+│               └── DrillholeTrace[]  (one per hole)
+│                   ├── Line          (full trace, grey/#666 or white if selected)
+│                   ├── InterceptSegment[]  (coloured by grade, YlOrRd)
+│                   ├── mesh          (collar sphere)
+│                   └── Html          (collar label)
+├── GradeLegend               (colour bar overlay, log-spaced stops)
+└── InfoPanel                 (selection details, intercept list, PDF links)
+```
+
+### Data flow
+
+1. `useMetadata()` and `useDrillholes()` hooks fetch from `/api/*` via TanStack Query (staleTime: Infinity, data never changes)
+2. `DrillholeGroup` creates a log-scaled d3 colour scale from the metadata grade range
+3. Each `DrillholeTrace` renders the pre-computed trace as a drei `Line`, overlays coloured `InterceptSegment` lines at the correct 3D positions
+4. Click events propagate through R3F's raycaster, updating Zustand store (`selectedHole`, `selectedIntercept`)
+5. `InfoPanel` subscribes to the store and shows hole details, intercept list with grade swatches, and PDF source links
+
+### State management
+
+Two stores, no mixing:
+
+- **Zustand** for UI state: `selectedHole`, `selectedIntercept`. Both 3D scene components and the InfoPanel subscribe via selectors.
+- **TanStack Query** for server state: drillholes and metadata. Fetched once, cached indefinitely.
+
+### Colour mapping
+
+Gold grades are mapped to the YlOrRd (yellow-orange-red) sequential colour ramp from d3-scale-chromatic. The scale uses a **log domain** because the grade distribution is heavily skewed: 12 of 14 intercepts fall below 5.0 g/t, but the range extends to 10.8. A linear scale compresses the visual range. Log scaling spreads differentiation across where the data actually sits.
+
+### Testing (Phase 2)
+
+20 tests across 3 suites:
+
+| Suite | Count | What |
+|-------|-------|------|
+| `colourScale.test.ts` | 8 | Log-scaled YlOrRd mapping, low/high ends, differentiation, parsing |
+| `client.test.ts` | 7 | API success, error, network failure, PDF URL construction |
+| `useStore.test.ts` | 5 | Selection state transitions, intercept clearing on hole change |

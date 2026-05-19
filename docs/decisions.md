@@ -62,3 +62,37 @@ Hardcoded localhost origins work for development but not deployment. `CORS_ORIGI
 ### Version-controlled performance metrics
 
 Performance test results are committed to `metrics/` as JSON. Budgets are defined in `metrics/budgets.json`. The assessor can see actual measured values, not just pass/fail. Git history shows how metrics evolved. The same files would feed CI/CD in production.
+
+---
+
+## Phase 2: Frontend + 3D Scene
+
+### React Three Fiber over vanilla Three.js
+
+R3F provides declarative scene composition with React's component model. The scene is built from `<Line>`, `<mesh>`, `<Html>` components that compose naturally. The alternative was imperative Three.js with manual scene graph management, which is harder to reason about and test.
+
+drei (the R3F helper library) provides `OrbitControls`, `Bounds` (auto-framing), `Line` (GPU-accelerated), and `Html` (screen-space labels). These would take significant effort to implement from scratch.
+
+### Zustand over React context for scene state
+
+Selection state (`selectedHole`, `selectedIntercept`) needs to be shared between the 3D scene and the info panel. React context would trigger re-renders of the entire tree on every state change. Zustand provides selector-based subscriptions, so only the components that use the changed slice re-render. For a scene with 31 interactive objects, this matters.
+
+### TanStack Query for data fetching
+
+The data is static (never changes during a session), but TanStack Query gives loading/error states, deduplication, and retry for free. The hooks return `{ data, isLoading, error }` and the components handle all three states. The alternative was raw `fetch` in a `useEffect`, which requires manual state management for loading/error.
+
+### Log-scaled colour domain
+
+The grade distribution is skewed: 12 of 14 intercepts fall below 5.0 g/t, with a single outlier at 10.8. A linear colour scale compresses 85% of the data into the cool half of the ramp. Log scaling (`scaleSequentialLog`) spreads the visual range so differences between 0.6 and 3.0 g/t are visible, not washed out. This is a deliberate choice, not a default.
+
+### YlOrRd colour ramp
+
+Yellow-orange-red follows mining convention: cool colours for low grades, hot for high. Alternatives considered: Viridis (perceptually uniform, but the yellow-purple range does not map intuitively to "low grade / high grade" for mining users), Magma (similar issue). YlOrRd is the standard in mining GIS and exploration software.
+
+### Tailwind CSS v4 with custom design tokens
+
+Tailwind v4 uses CSS-native `@theme` for tokens rather than a JavaScript config file. Design tokens (background, text, accent, border colours) are defined once in `index.css` and referenced throughout. The colour system uses a dark theme (common for 3D viewers) with amber/gold accents that reference the gold commodity.
+
+### Frontend receives pre-computed geometry
+
+The frontend does zero geometry maths. All 3D coordinates arrive pre-computed from the backend in the Three.js Y-up coordinate system. This keeps the rendering layer thin: map over the data, create `Line` and `mesh` components at the given positions. No desurveying, no coordinate transforms, no axis mapping on the client.

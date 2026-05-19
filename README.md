@@ -5,6 +5,7 @@ Interactive 3D viewer for mining drillhole data, built for the Pulse Intelligenc
 ## Prerequisites
 
 - Python 3.12+
+- Node.js 18+
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
 
 ## Backend
@@ -34,7 +35,7 @@ cd backend
 uv run pytest
 ```
 
-74 tests covering desurveying maths, CSV parsing, data quality checks, API endpoints, and performance budgets.
+93 tests covering desurveying maths, CSV parsing, data quality checks, API endpoints, and performance budgets.
 
 ### Docker
 
@@ -44,12 +45,44 @@ docker build -t pulse-drillholes .
 docker run -p 8080:8080 pulse-drillholes
 ```
 
+## Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The dev server runs on `http://localhost:5173` and proxies `/api/*` to the backend.
+
+### Tests
+
+```bash
+cd frontend
+npm run test
+```
+
+20 tests covering colour scale mapping, API client, and state management.
+
+### Build
+
+```bash
+cd frontend
+npm run build
+```
+
 ### Lint
 
 ```bash
 cd backend
 uv run ruff check app/ tests/
 uv run ruff format --check app/ tests/
+```
+
+```bash
+cd frontend
+npm run lint
+npm run format:check
 ```
 
 ## Documentation
