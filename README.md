@@ -48,7 +48,8 @@ docker run -p 8080:8080 pulse-drillholes
 
 ```bash
 cd backend
-uv run ruff check .
+uv run ruff check app/ tests/
+uv run ruff format --check app/ tests/
 ```
 
 ## Documentation
@@ -56,3 +57,4 @@ uv run ruff check .
 - [docs/architecture.md](docs/architecture.md) - system overview, coordinate system, API design
 - [docs/data-pipeline.md](docs/data-pipeline.md) - data flow from CSV to 3D-ready responses
 - [docs/decisions.md](docs/decisions.md) - key technical decisions with rationale
+- [docs/coding-standards.md](docs/coding-standards.md) - coding standards for both stacks
