@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="frontend/public/icon-192.png" alt="Drillhole Viewer" width="96" />
+</p>
+
 # 3D Drillhole Viewer
 
 Interactive 3D viewer for mining drillhole data, built for the Pulse Intelligence Partners assessment.
