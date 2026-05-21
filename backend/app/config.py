@@ -8,7 +8,12 @@ COLLARS_PATH = DATA_DIR / "drillhole_collars.csv"
 INTERCEPTS_PATH = DATA_DIR / "drill_intercepts.csv"
 PDF_PATH = DATA_DIR / "source.pdf"
 
-_default_origins = ["http://localhost:5173", "http://localhost:3000"]
+_default_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:3000",
+]
 _env_origins = os.environ.get("CORS_ORIGINS", "")
 CORS_ORIGINS: list[str] = (
     [o.strip() for o in _env_origins.split(",") if o.strip()] if _env_origins else _default_origins
