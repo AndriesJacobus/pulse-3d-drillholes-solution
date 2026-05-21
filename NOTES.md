@@ -1,13 +1,16 @@
 # NOTES
 
+**Live demo:** https://ajdp-pulse-drillholes.web.app
+
 ## Time spent
 
 | Phase | Time | Focus |
 |-------|------|-------|
 | Backend | ~1h | FastAPI, data models, desurveying engine, data quality, tests |
 | Frontend + 3D | ~1.5h | React + R3F, grade colouring, 3D scene, info panel, 20 tests |
-| Interaction + UX | ~2h | Camera controls, grade estimation (GPR), hover, animation-deferred PDF, pixelation transitions, 39 FE + 25 BE tests |
-| Deploy + polish | - | |
+| Interaction + UX | ~2h | Camera controls, grade estimation (GPR), hover, PDF viewer, pixelation transitions, 42 FE + 133 BE tests |
+| Deploy + polish | ~1h | Cloud Run + Firebase, Playwright E2E, setup/deploy scripts, help popup |
+| **Total implementation** | **~5.5h** | |
 
 Pre-work (research, planning, architecture docs): ~3h, tracked separately. This covered company research, data audit, architecture decisions, and implementation planning before writing code.
 
@@ -53,6 +56,12 @@ The result is a voxel grid (10m cells) rendered as an `InstancedMesh`. Opacity e
 
 GPR with an RBF kernel is mathematically equivalent to kriging with a Gaussian variogram, but without the fragile variogram fitting step. This distinction matters: presenting kriging results from 14 samples would suggest poor geostatistical judgement.
 
+### Deploy
+
+Firebase Hosting serves the frontend and rewrites `/api/**` to Cloud Run. The same relative API paths work in both local development (Vite proxy) and production (Firebase rewrite), so there are zero environment-specific code paths.
+
+Setup and deploy scripts (`scripts/setup.sh`, `scripts/deploy.sh`) automate prerequisite checks, dependency installation, linting, testing, building, and deployment with coloured output and pre-flight gates.
+
 ## Trade-offs
 
 - **No database.** Static CSV loaded into memory at startup. For 31 holes this is appropriate. The loader abstraction (`loader.py`) means swapping CSV for PostgreSQL changes one module.
@@ -62,7 +71,6 @@ GPR with an RBF kernel is mathematically equivalent to kriging with a Gaussian v
 - **GPR over kriging.** Kriging is the industry standard but needs 30+ samples for variogram estimation. GPR produces equivalent results without the variogram step. The trade-off: GPR is less familiar to mining geologists, but the mathematical output is identical.
 - **Animation-first PDF updates.** Clicking a hole or cluster defers the PDF panel update until the camera animation finishes. This prevents the side panel resizing mid-flight, which was visually jarring. The `onArrive` callback on FocusTarget keeps this decoupled from the animation system itself.
 - **Canvas pixelation transition for page changes.** A canvas overlay runs a nearest-neighbour upscale effect over 700ms when the PDF switches pages. Two `drawImage` calls per frame, no external dependency. Masks the iframe reload flicker.
-- **Natural sky blue gradient.** Replaced the near-black navy (#0a1628) background with sky blue (#4a90c4). Combined with the extended zoom range (maxDistance 10000, matching the camera far plane), the scene reads as an outdoor site viewed from above rather than a dark void.
 - **Single global GPR model.** Both prospects are interpolated together. With more data, fitting separate models per prospect would capture local spatial structure better.
 - **Fixed 10m voxel grid.** Adequate for the data density. Adaptive resolution (finer near data, coarser far away) would improve visual quality at the cost of complexity.
 
@@ -75,3 +83,5 @@ GPR with an RBF kernel is mathematically equivalent to kriging with a Gaussian v
 - Embedded PDF viewer with extraction region highlighting
 - Performance optimisation for large datasets (LOD, instancing, streaming)
 - Authentication and multi-tenancy
+- Per-prospect GPR models for better local spatial resolution
+- Adaptive voxel grid resolution based on data density
