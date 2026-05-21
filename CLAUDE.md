@@ -23,7 +23,7 @@ Solution repo for the Pulse Intelligence Partners full-stack 3D drillholes chall
 ## Stack
 
 - **Backend:** FastAPI (Python 3.12), Pydantic v2, stdlib csv + math, uvicorn
-- **Frontend:** React 18 + TypeScript + Vite, Three.js via React Three Fiber + drei
+- **Frontend:** React 19 + TypeScript + Vite, Three.js via React Three Fiber + drei
 - **State:** Zustand (scene state), TanStack Query (data fetching)
 - **Styling:** Tailwind CSS v4
 - **Colour:** d3-scale + d3-scale-chromatic

@@ -106,7 +106,7 @@ A standalone CLI script (`scripts/analyse_data.py`) provides deeper statistical 
 
 ### Testing
 
-133 tests across 10 suites, with 98% code coverage enforced via `pytest-cov` (threshold: 90%):
+133 tests across 9 suites, with 98% code coverage enforced via `pytest-cov` (threshold: 90%):
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -119,7 +119,6 @@ A standalone CLI script (`scripts/analyse_data.py`) provides deeper statistical 
 | `test_clustering.py` | 13 | DBSCAN clustering: empty/single input, cluster formation, noise exclusion, labels, centroid, radius, lat/lon averaging, hole accounting |
 | `test_performance.py` | 5 | Response times; payload size; startup load. Budgets enforced from `metrics/budgets.json` |
 | `test_analyse_script.py` | 6 | Script runs; detects outliers; grade/spatial stats; error handling |
-| `conftest.py` | 1 | MetricsCollector fixture with version-controlled budgets |
 
 Performance metrics are version-controlled in `metrics/`. Each test run writes measured values against hard budgets defined in `metrics/budgets.json`. Coverage is enforced at 90% minimum via `pytest-cov` in `pyproject.toml`.
 
@@ -197,7 +196,7 @@ Playwright's `webServer` config starts both backend (uvicorn) and frontend (vite
 
 ### Unit tests (Vitest)
 
-42 tests across 7 suites:
+48 tests across 8 suites:
 
 | Suite | Count | What |
 |-------|-------|------|
@@ -205,9 +204,10 @@ Playwright's `webServer` config starts both backend (uvicorn) and frontend (vite
 | `client.test.ts` | 7 | API success, error, network failure, PDF URL construction |
 | `useStore.test.ts` | 10 | Selection state transitions, intercept clearing, grade cloud toggle, PDF state, deselection |
 | `InfoPanel.test.tsx` | 7 | Empty state, hole details, intercepts, barren message, PDF links |
+| `HelpPopup.test.tsx` | 6 | First-visit auto-show, dismiss persistence, Escape key, toggle after dismissal |
 | `GradeLegend.test.tsx` | 4 | Min/max labels, colour stops count, commodity label, background colours |
 | `Header.test.tsx` | 3 | Project name from metadata, hole/intercept counts, fallback title |
-| `DrillholeTrace.test.tsx` | 3 | Click-to-select, deselect on miss, camera fly-to on selection |
+| `DrillholeTrace.test.tsx` | 3 | Label click selects hole, selected hole visual distinction, clears previous intercept |
 
 ## Interaction and Grade Estimation (Phase 3)
 

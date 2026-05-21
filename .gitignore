@@ -23,6 +23,8 @@ Thumbs.db
 
 # Caches
 .pytest_cache/
+.ruff_cache/
+.vite/
 *.log
 .firebase/
 

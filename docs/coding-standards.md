@@ -92,7 +92,7 @@ Flat config (`eslint.config.js`, ESLint 9+). Plugins: `@eslint/js`, `typescript-
 
 ### TypeScript
 
-Strict mode enabled. Key settings: `noUnusedLocals`, `noUnusedParameters`, `verbatimModuleSyntax` (forces explicit `import type`), `noFallthroughCasesInSwitch`. Target: ES2022. Module resolution: bundler (Vite).
+Strict mode enabled. Key settings: `noUnusedLocals`, `noUnusedParameters`, `verbatimModuleSyntax` (forces explicit `import type`), `noFallthroughCasesInSwitch`. Target: ES2023. Module resolution: bundler (Vite).
 
 ### React patterns
 
