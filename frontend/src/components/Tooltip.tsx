@@ -8,7 +8,7 @@ interface TooltipProps {
 
 export function Tooltip({ text, children, position = 'left' }: TooltipProps) {
   const [visible, setVisible] = useState(false);
-  const timeout = useRef<ReturnType<typeof setTimeout>>();
+  const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const show = () => {
     timeout.current = setTimeout(() => setVisible(true), 300);
