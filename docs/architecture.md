@@ -29,8 +29,11 @@ FastAPI Backend
 | `models.py` | Pydantic models for input records (CollarRecord, InterceptRecord) and API responses (DrillholeResponse, MetadataResponse). Validators enforce domain rules at parse time. |
 | `desurvey.py` | Converts collar position + dip + azimuth + depth into 3D coordinates. Handles coordinate centering and axis mapping for Three.js. |
 | `quality.py` | Dataset-level quality checks run at startup. Spatial outliers, grade outliers, completeness, consistency, domain rules, near-duplicate detection. |
-| `config.py` | Application settings. Data paths, CORS origins (env-configurable), project name, sample interval. |
-| `main.py` | FastAPI app with lifespan startup. Five endpoints. All data loaded and desurveyed once at startup, cached on `app.state`. |
+| `estimation.py` | Grade estimation using Gaussian Process Regression. Extracts sample points from intercepts (midpoints) and barren holes (zero-grade at intervals). Builds a 3D voxel grid, fits GPR with RBF kernel, filters by distance and cutoff. |
+| `clustering.py` | DBSCAN spatial clustering on collar 2D positions (east, north). eps=100m, min_samples=2. Produces 4 clusters from 30 holes (CVEX028 excluded as noise). Noise points are excluded, not promoted to singletons. |
+| `config.py` | Application settings. Data paths, CORS origins (env-configurable, includes ports 5173-5175), project name, sample interval. |
+| `run.py` | Backend launcher with auto port selection. Scans from port 8000 upward, writes the chosen port to stdout for frontend consumption. |
+| `main.py` | FastAPI app with lifespan startup. Seven endpoints. All data loaded, desurveyed, clustered, and interpolated once at startup, cached on `app.state`. |
 
 ### Startup flow
 
@@ -38,12 +41,14 @@ Data is loaded once during the FastAPI lifespan context, not per-request. For 31
 
 ```
 Startup
-  load_collars(csv)       -> list[CollarRecord]  (Pydantic validates each row)
-  load_intercepts(csv)    -> list[InterceptRecord] (cross-validates against collars)
-  compute_centroid()      -> (east, north, rl) mean of all collars
-  build_drillhole_responses()  -> pre-computed 3D traces + intercept positions
-  build_metadata()        -> grade range, prospects, centroid
-  run_quality_report()    -> findings by severity
+  load_collars(csv)              -> list[CollarRecord]  (Pydantic validates each row)
+  load_intercepts(csv)           -> list[InterceptRecord] (cross-validates against collars)
+  compute_centroid()             -> (east, north, rl) mean of all collars
+  build_drillhole_responses()    -> pre-computed 3D traces + intercept positions
+  build_metadata()               -> grade range, prospects, centroid
+  run_quality_report()           -> findings by severity
+  compute_grade_estimation()     -> GPR interpolation, voxel grid (~2600 voxels)
+  compute_clusters()             -> DBSCAN collar grouping (4 clusters, noise excluded)
 ```
 
 ### API endpoints
@@ -54,6 +59,8 @@ Startup
 | `GET /api/metadata` | Project info, prospects, grade range, geographic centroid, commodities |
 | `GET /api/drillholes` | All 31 holes with collar position, 3D trace, intercepts (with pre-computed 3D positions) |
 | `GET /api/source-pdf` | Binary PDF (the original ASX announcement) |
+| `GET /api/grade-estimation` | GPR-interpolated grade voxels with uncertainty, cell size, method, disclaimer |
+| `GET /api/clusters` | 4 spatial clusters with centroids, radii, hole membership, lat/lon (30 holes, noise excluded) |
 | `GET /api/data-quality` | Quality findings by severity with affected rows |
 
 Interactive API docs available at `/docs` (Swagger UI) and `/redoc`.
@@ -99,7 +106,7 @@ A standalone CLI script (`scripts/analyse_data.py`) provides deeper statistical 
 
 ### Testing
 
-93 tests across 8 suites, with 98% code coverage enforced via `pytest-cov` (threshold: 90%):
+133 tests across 10 suites, with 98% code coverage enforced via `pytest-cov` (threshold: 90%):
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -107,7 +114,9 @@ A standalone CLI script (`scripts/analyse_data.py`) provides deeper statistical 
 | `test_desurvey.py` | 20 | Vertical, horizontal, angled holes; centroid; scene coords; intercept positions |
 | `test_loader.py` | 13 | Valid/invalid CSV; orphan intercepts; empty fields; whitespace; real data |
 | `test_quality.py` | 12 | Each quality check; specific findings (CVEX028, STEX014); full report |
-| `test_api.py` | 17 | All endpoints; response shapes; error paths (404); CORS allowed/disallowed/preflight |
+| `test_api.py` | 25 | All endpoints including grade estimation and clusters; response shapes; error paths; CORS |
+| `test_estimation.py` | 20 | Sample extraction, grid building, distance filtering, fade function, GPR output validation |
+| `test_clustering.py` | 13 | DBSCAN clustering: empty/single input, cluster formation, noise exclusion, labels, centroid, radius, lat/lon averaging, hole accounting |
 | `test_performance.py` | 5 | Response times; payload size; startup load. Budgets enforced from `metrics/budgets.json` |
 | `test_analyse_script.py` | 6 | Script runs; detects outliers; grade/spatial stats; error handling |
 | `conftest.py` | 1 | MetricsCollector fixture with version-controlled budgets |
@@ -129,19 +138,29 @@ React 19 + TypeScript + Vite. Three.js via React Three Fiber (R3F) and drei. Zus
 ```
 App
 ├── Header                    (project name, hole/intercept counts)
-├── Scene                     (loading/error states, R3F Canvas)
-│   └── Canvas
-│       ├── Lights            (ambient 0.6 + directional 0.4)
-│       ├── OrbitControls     (orbit, zoom, pan)
-│       └── Bounds            (auto-frames camera to geometry)
-│           └── DrillholeGroup
-│               └── DrillholeTrace[]  (one per hole)
-│                   ├── Line          (full trace, grey/#666 or white if selected)
-│                   ├── InterceptSegment[]  (coloured by grade, YlOrRd)
-│                   ├── mesh          (collar sphere)
-│                   └── Html          (collar label)
+├── Scene                     (CSS gradient bg, R3F Canvas, overlay controls)
+│   ├── Canvas
+│   │   ├── Lights            (ambient 0.6 + directional 0.4)
+│   │   ├── CameraController  (fly-to on selection + cluster zoom, lerp orbit target)
+│   │   ├── Bounds            (auto-frames camera to geometry)
+│   │   │   └── DrillholeGroup
+│   │   │       └── DrillholeTrace[]  (one per hole, hover feedback, distance-adaptive hit areas)
+│   │   │           ├── Line          (full trace, colour by state)
+│   │   │           ├── mesh          (invisible cylinder, scales with camera distance)
+│   │   │           ├── InterceptSegment[]  (coloured by grade, YlOrRd, adaptive hit areas)
+│   │   │           ├── mesh          (collar sphere)
+│   │   │           └── Html          (collar label, clickable: selects hole + zooms camera)
+│   │   ├── ClusterLayer      (ring markers at DBSCAN cluster centroids)
+│   │   │   └── ClusterMarker[]  (click to zoom, amber ring + label visible >600 units)
+│   │   ├── MapLayer          (ground context)
+│   │   │   └── MapPlane      (multi-tile satellite imagery + 20km brown ground plane)
+│   │   └── GradeCloud        (InstancedMesh voxels, togglable)
+│   ├── Tooltip-wrapped buttons (Fit all, Show grades, Google Maps)
+│   └── Disclaimer            (shown when grade cloud active)
 ├── GradeLegend               (colour bar overlay, log-spaced stops)
-└── InfoPanel                 (selection details, intercept list, PDF links)
+├── InfoPanel                 (always shown: details, intercepts, PDF source buttons, Google Maps link)
+└── PdfViewer                 (iframe PDF, stacks below InfoPanel when active, page-anchored)
+    └── PixelOverlay          (canvas-based pixelation transition on page change, nearest-neighbour upscale)
 ```
 
 ### Data flow
@@ -156,19 +175,75 @@ App
 
 Two stores, no mixing:
 
-- **Zustand** for UI state: `selectedHole`, `selectedIntercept`. Both 3D scene components and the InfoPanel subscribe via selectors.
-- **TanStack Query** for server state: drillholes and metadata. Fetched once, cached indefinitely.
+- **Zustand** for UI state: `selectedHole`, `selectedIntercept`, `showGradeCloud`, `pdfPage`, `focusTarget` (with optional `onArrive` callback). Scene components, InfoPanel, and PdfViewer subscribe via selectors. The `onArrive` callback on FocusTarget allows click handlers to defer side effects (e.g. PDF updates) until the camera animation completes.
+- **TanStack Query** for server state: drillholes, metadata, grade estimation, and clusters. Fetched once, cached indefinitely.
 
 ### Colour mapping
 
 Gold grades are mapped to the YlOrRd (yellow-orange-red) sequential colour ramp from d3-scale-chromatic. The scale uses a **log domain** because the grade distribution is heavily skewed: 12 of 14 intercepts fall below 5.0 g/t, but the range extends to 10.8. A linear scale compresses the visual range. Log scaling spreads differentiation across where the data actually sits.
 
-### Testing (Phase 2)
+### Testing
 
-20 tests across 3 suites:
+39 tests across 6 suites:
 
 | Suite | Count | What |
 |-------|-------|------|
 | `colourScale.test.ts` | 8 | Log-scaled YlOrRd mapping, low/high ends, differentiation, parsing |
 | `client.test.ts` | 7 | API success, error, network failure, PDF URL construction |
-| `useStore.test.ts` | 5 | Selection state transitions, intercept clearing on hole change |
+| `useStore.test.ts` | 10 | Selection state transitions, intercept clearing, grade cloud toggle, PDF state, deselection |
+| `InfoPanel.test.tsx` | 7 | Empty state, hole details, intercepts, barren message, PDF links |
+| `GradeLegend.test.tsx` | 4 | Min/max labels, colour stops count, commodity label, background colours |
+| `Header.test.tsx` | 3 | Project name from metadata, hole/intercept counts, fallback title |
+
+## Interaction and Grade Estimation (Phase 3)
+
+### Camera controls
+
+OrbitControls with fly-to animation. Selecting a hole animates the camera to the collar position over 1 second using smoothstep easing (HOLE_ZOOM_DISTANCE=350 units). Clicking a cluster zooms to fit the cluster (radius * 4). Background click deselects via `onPointerMissed` on the Canvas. "Fit all" button calls `Bounds.refresh()` to re-frame all geometry.
+
+### Hover feedback
+
+Hover state tracked per `DrillholeTrace` via `onPointerEnter`/`onPointerLeave` on the invisible cylinder hit mesh. Hovered traces brighten to #cccccc and thicken to 2px. Cursor changes to pointer on hover.
+
+### Grade estimation
+
+**Backend (`estimation.py`):**
+
+1. Extract sample points: intercept midpoints (with grade) and barren hole positions (grade=0 at 20m intervals)
+2. Log-transform grades for numerical stability
+3. Fit `GaussianProcessRegressor` with `ConstantKernel * RBF + WhiteKernel`
+4. Build 10m regular grid, filter to within 50m of nearest sample
+5. Predict mean and std, back-transform, clamp negatives and cap at 1.5x observed max
+6. Opacity combines GPR uncertainty with cosine distance fade
+
+**Frontend (`GradeCloud.tsx`):**
+
+`THREE.InstancedMesh` with per-instance colour (grade mapped to YlOrRd) and per-instance position. Material is transparent with `depthWrite: false` and `renderOrder: -1` to avoid occluding drillhole traces. Togglable via Zustand store.
+
+**Honesty:** The feature is off by default. When active, a disclaimer states "Estimated from 14 intercepts using GPR interpolation. This is a visual aid for exploration, not a resource estimate." Voxel opacity fades with distance from data and with increasing uncertainty.
+
+### Spatial clustering
+
+**Backend (`clustering.py`):** DBSCAN on 2D collar coordinates (east, north), eps=100m, min_samples=2. Produces 4 clusters from 30 holes. CVEX028 is excluded as noise (2.6km spatial outlier). Noise points are dropped rather than promoted to singletons, keeping the cluster view focused on meaningful groupings. Cluster labels follow the format "Cluster N".
+
+**Frontend (`ClusterMarker.tsx`):** Ring geometry at each cluster centroid with an Html label. Labels are visible when zoomed out (camera distance >600 units) and hidden when close, avoiding clutter during detailed inspection. Clicking a cluster triggers `setFocusTarget` in Zustand, which causes `CameraController` to animate the camera to frame the cluster (position at radius * 4 offset).
+
+### Distance-adaptive click areas
+
+`DrillholeTrace` and `InterceptSegment` scale their invisible hit cylinders based on camera distance. At 50m (close), the radius stays at 1x. At 1000m+, it reaches 6x. This makes far-away holes clickable without affecting precision when zoomed in. Implemented via `useFrame` per component.
+
+### PDF viewer
+
+Clicking a "Source" button on an intercept or collar sets `pdfPage` in Zustand. The App layout responds: PdfViewer (an iframe pointing to `/api/source-pdf#page=N`) stacks below the InfoPanel rather than replacing it, so hole details remain visible while cross-referencing the source document. A close button resets `pdfPage` to null, collapsing the PDF section.
+
+### Satellite map and ground plane
+
+Multi-tile ESRI World Imagery with auto-zoom selection (max 12 tiles) covering the full extent of the drillhole data. A 20km brown ground plane extends behind the tiles for continuous ground reference. All materials use `DoubleSide` rendering so they remain visible when orbiting below the surface. Y position is near surface level (`bounds.max_y - 15`).
+
+### Google Maps integration
+
+Per-hole links in the InfoPanel use the `/maps/place/` format, which drops a pin at the hole's lat/lon. The scene toolbar button uses the `/maps/dir/` format with cluster centroids as waypoints, showing pins A through D for the four clusters. Both open in satellite mode.
+
+### Visual orientation
+
+A CSS gradient behind the transparent Canvas (dark blue at top, earthy brown at bottom) provides sky/ground orientation with zero GPU cost. Button tooltips (custom component, 300ms delay) give discoverability to the scene controls.
