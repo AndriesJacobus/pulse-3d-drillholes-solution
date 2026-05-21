@@ -34,7 +34,7 @@ class SceneErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex h-full items-center justify-center" data-testid="error">
+        <div className="flex h-full items-center justify-center" data-testid="render-error">
           <span className="text-red-400">3D rendering failed. Try refreshing the page.</span>
         </div>
       );
@@ -135,7 +135,7 @@ export function Scene() {
 
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center" data-testid="error">
+      <div className="flex h-full items-center justify-center" data-testid="load-error">
         <span className="text-red-400">Failed to load data. Is the backend running?</span>
       </div>
     );

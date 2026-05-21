@@ -6,16 +6,14 @@ source "$(dirname "$0")/helpers.sh"
 SKIP_TESTS=0
 BACKEND_ONLY=0
 FRONTEND_ONLY=0
-ASSUME_YES=0
 
 for arg in "$@"; do
   case "$arg" in
     --skip-tests)     SKIP_TESTS=1 ;;
     --backend-only)   BACKEND_ONLY=1 ;;
     --frontend-only)  FRONTEND_ONLY=1 ;;
-    --yes|-y)         ASSUME_YES=1 ;;
     -h|--help)
-      echo "Usage: ./scripts/setup.sh [--skip-tests] [--backend-only] [--frontend-only] [--yes]"
+      echo "Usage: ./scripts/setup.sh [--skip-tests] [--backend-only] [--frontend-only]"
       exit 0 ;;
     *) echo "Unknown flag: $arg"; exit 1 ;;
   esac
@@ -23,6 +21,8 @@ done
 
 TOTAL=7
 [ "$SKIP_TESTS" = "1" ] && TOTAL=$((TOTAL - 1))
+[ "$BACKEND_ONLY" = "1" ] && TOTAL=$((TOTAL - 2))
+[ "$FRONTEND_ONLY" = "1" ] && TOTAL=$((TOTAL - 2))
 
 STEP=0
 next_step() { STEP=$((STEP + 1)); section "$STEP" "$TOTAL" "$1"; }
