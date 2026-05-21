@@ -1,4 +1,4 @@
-import type { Drillhole, Metadata } from '../types/drillhole';
+import type { Cluster, Drillhole, GradeEstimation, Metadata } from '../types/drillhole';
 
 const API_BASE = '/api';
 
@@ -11,6 +11,18 @@ export async function fetchDrillholes(): Promise<Drillhole[]> {
 export async function fetchMetadata(): Promise<Metadata> {
   const res = await fetch(`${API_BASE}/metadata`);
   if (!res.ok) throw new Error(`Failed to fetch metadata: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchGradeEstimation(): Promise<GradeEstimation> {
+  const res = await fetch(`${API_BASE}/grade-estimation`);
+  if (!res.ok) throw new Error(`Failed to fetch grade estimation: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchClusters(): Promise<Cluster[]> {
+  const res = await fetch(`${API_BASE}/clusters`);
+  if (!res.ok) throw new Error(`Failed to fetch clusters: ${res.status}`);
   return res.json();
 }
 

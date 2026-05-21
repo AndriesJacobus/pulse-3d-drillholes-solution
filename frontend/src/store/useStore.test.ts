@@ -28,7 +28,7 @@ const mockIntercept: Intercept = {
 
 describe('useStore', () => {
   beforeEach(() => {
-    useStore.setState({ selectedHole: null, selectedIntercept: null });
+    useStore.setState({ selectedHole: null, selectedIntercept: null, showGradeCloud: false });
   });
 
   test('initial state has nothing selected', () => {
@@ -59,5 +59,34 @@ describe('useStore', () => {
     useStore.getState().setSelectedHole(null);
     expect(useStore.getState().selectedHole).toBeNull();
     expect(useStore.getState().selectedIntercept).toBeNull();
+  });
+
+  test('selecting a hole does not change pdfPage', () => {
+    useStore.setState({ pdfPage: 5 });
+    useStore.getState().setSelectedHole(mockHole);
+    expect(useStore.getState().pdfPage).toBe(5);
+  });
+
+  test('selecting a hole preserves null pdfPage', () => {
+    useStore.setState({ pdfPage: null });
+    useStore.getState().setSelectedHole(mockHole);
+    expect(useStore.getState().pdfPage).toBeNull();
+  });
+
+  test('deselecting a hole closes the PDF', () => {
+    useStore.setState({ pdfPage: 5 });
+    useStore.getState().setSelectedHole(null);
+    expect(useStore.getState().pdfPage).toBeNull();
+  });
+
+  test('showGradeCloud defaults to false', () => {
+    expect(useStore.getState().showGradeCloud).toBe(false);
+  });
+
+  test('setShowGradeCloud toggles state', () => {
+    useStore.getState().setShowGradeCloud(true);
+    expect(useStore.getState().showGradeCloud).toBe(true);
+    useStore.getState().setShowGradeCloud(false);
+    expect(useStore.getState().showGradeCloud).toBe(false);
   });
 });
