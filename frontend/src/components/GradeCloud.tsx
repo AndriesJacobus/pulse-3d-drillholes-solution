@@ -21,9 +21,36 @@ export function GradeCloud({ voxels, cellSize, gradeMin, gradeMax }: GradeCloudP
     [gradeMin, gradeMax],
   );
 
+  const material = useMemo(() => {
+    const mat = new THREE.MeshStandardMaterial({
+      transparent: true,
+      depthWrite: false,
+    });
+    mat.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          'void main() {',
+          'attribute float instanceOpacity;\nvarying float vInstanceOpacity;\nvoid main() {',
+        )
+        .replace(
+          '#include <color_vertex>',
+          '#include <color_vertex>\nvInstanceOpacity = instanceOpacity;',
+        );
+      shader.fragmentShader = shader.fragmentShader
+        .replace('void main() {', 'varying float vInstanceOpacity;\nvoid main() {')
+        .replace(
+          '#include <opaque_fragment>',
+          'diffuseColor.a *= vInstanceOpacity;\n#include <opaque_fragment>',
+        );
+    };
+    return mat;
+  }, []);
+
   useEffect(() => {
     if (!meshRef.current || voxels.length === 0) return;
     const mesh = meshRef.current;
+
+    const opacities = new Float32Array(voxels.length);
 
     for (let i = 0; i < voxels.length; i++) {
       const v = voxels[i];
@@ -34,10 +61,15 @@ export function GradeCloud({ voxels, cellSize, gradeMin, gradeMax }: GradeCloudP
       const rgb = parseColourToRgb(gradeToColour(colourScale, v.grade));
       colour.setRGB(rgb[0], rgb[1], rgb[2]);
       mesh.setColorAt(i, colour);
+
+      opacities[i] = v.opacity;
     }
 
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+
+    const attr = new THREE.InstancedBufferAttribute(opacities, 1);
+    mesh.geometry.setAttribute('instanceOpacity', attr);
   }, [voxels, colourScale]);
 
   if (voxels.length === 0) return null;
@@ -45,7 +77,7 @@ export function GradeCloud({ voxels, cellSize, gradeMin, gradeMax }: GradeCloudP
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, voxels.length]} renderOrder={-1}>
       <boxGeometry args={[cellSize * 0.9, cellSize * 0.9, cellSize * 0.9]} />
-      <meshStandardMaterial transparent opacity={0.35} depthWrite={false} />
+      <primitive object={material} attach="material" />
     </instancedMesh>
   );
 }

@@ -1,11 +1,11 @@
-import { useRef, useEffect, useCallback } from 'react';
-import * as THREE from 'three';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Bounds, OrbitControls, useBounds } from '@react-three/drei';
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { useRef, useCallback } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { Bounds } from '@react-three/drei';
 import { Suspense } from 'react';
+import { CameraController } from './CameraController';
+import type { CameraApi } from './CameraController';
+import { BoundsContent } from './BoundsContent';
 import { ClusterMarker } from './ClusterMarker';
-import { DrillholeGroup } from './DrillholeGroup';
 import { GradeCloud } from './GradeCloud';
 import { MapPlane } from './MapPlane';
 import {
@@ -16,175 +16,7 @@ import {
 } from '../hooks/useDrillholes';
 import { Tooltip } from './Tooltip';
 import { useStore } from '../store/useStore';
-
-const ANIM_DURATION_S = 1.0;
-const HOLE_ZOOM_DISTANCE = 350;
-
-function smoothstep(t: number): number {
-  const c = Math.max(0, Math.min(1, t));
-  return c * c * (3 - 2 * c);
-}
-
-type AnimateFn = (
-  target: THREE.Vector3,
-  camDest: THREE.Vector3 | null,
-  dur?: number,
-  onComplete?: () => void,
-) => void;
-
-interface CameraApi {
-  animate: AnimateFn;
-  stop: () => void;
-}
-
-function CameraController({ apiRef }: { apiRef: React.RefObject<CameraApi | null> }) {
-  const controlsRef = useRef<OrbitControlsImpl>(null);
-  const selectedHole = useStore((s) => s.selectedHole);
-  const setPdfPage = useStore((s) => s.setPdfPage);
-  const focusTarget = useStore((s) => s.focusTarget);
-  const setFocusTarget = useStore((s) => s.setFocusTarget);
-
-  const startTarget = useRef(new THREE.Vector3());
-  const endTarget = useRef(new THREE.Vector3());
-  const startCamPos = useRef(new THREE.Vector3());
-  const endCamPos = useRef(new THREE.Vector3());
-  const progress = useRef(1);
-  const duration = useRef(ANIM_DURATION_S);
-  const hasCamDest = useRef(false);
-  const onCompleteRef = useRef<(() => void) | null>(null);
-
-  const beginAnimation = useCallback(
-    (target: THREE.Vector3, camDest: THREE.Vector3 | null, dur?: number, onComplete?: () => void) => {
-      if (!controlsRef.current) return;
-      startTarget.current.copy(controlsRef.current.target);
-      endTarget.current.copy(target);
-      duration.current = dur ?? ANIM_DURATION_S;
-      if (camDest) {
-        startCamPos.current.copy(controlsRef.current.object.position);
-        endCamPos.current.copy(camDest);
-        hasCamDest.current = true;
-      } else {
-        hasCamDest.current = false;
-      }
-      onCompleteRef.current = onComplete ?? null;
-      progress.current = 0;
-    },
-    [],
-  );
-
-  useEffect(() => {
-    apiRef.current = {
-      animate: beginAnimation,
-      stop: () => {
-        progress.current = 1;
-        onCompleteRef.current = null;
-      },
-    };
-  }, [apiRef, beginAnimation]);
-
-  useEffect(() => {
-    if (!selectedHole || !controlsRef.current) return;
-    const collar = new THREE.Vector3(
-      selectedHole.collar.x,
-      selectedHole.collar.y,
-      selectedHole.collar.z,
-    );
-    const camPos = controlsRef.current.object.position;
-    const dir = camPos.clone().sub(controlsRef.current.target).normalize();
-    const dest = collar.clone().add(dir.multiplyScalar(HOLE_ZOOM_DISTANCE));
-    const page = selectedHole.collar_page ?? null;
-    beginAnimation(collar, dest, undefined, () => setPdfPage(page));
-  }, [selectedHole, beginAnimation, setPdfPage]);
-
-  useEffect(() => {
-    if (!focusTarget || !controlsRef.current) return;
-    const offset = new THREE.Vector3(1, 0.8, 1).normalize().multiplyScalar(focusTarget.radius * 4);
-    const dest = focusTarget.position.clone().add(offset);
-    beginAnimation(focusTarget.position, dest, undefined, focusTarget.onArrive);
-    setFocusTarget(null);
-  }, [focusTarget, setFocusTarget, beginAnimation]);
-
-  useFrame((_state, delta) => {
-    if (!controlsRef.current || progress.current >= 1) return;
-
-    progress.current = Math.min(1, progress.current + delta / duration.current);
-    const t = smoothstep(progress.current);
-
-    const controls = controlsRef.current;
-    controls.target.lerpVectors(startTarget.current, endTarget.current, t);
-
-    if (hasCamDest.current) {
-      controls.object.position.lerpVectors(startCamPos.current, endCamPos.current, t);
-    }
-
-    controls.update();
-
-    if (progress.current >= 1 && onCompleteRef.current) {
-      const cb = onCompleteRef.current;
-      onCompleteRef.current = null;
-      cb();
-    }
-  });
-
-  return (
-    <OrbitControls
-      ref={controlsRef}
-      makeDefault
-      enableDamping
-      dampingFactor={0.1}
-      minDistance={10}
-      maxDistance={10000}
-    />
-  );
-}
-
-function BoundsContent({
-  onReady,
-  cameraApi,
-}: {
-  onReady: (api: { resetCamera: () => void }) => void;
-  cameraApi: React.RefObject<CameraApi | null>;
-}) {
-  const bounds = useBounds();
-  const homeCamPos = useRef<THREE.Vector3 | null>(null);
-  const homeTarget = useRef<THREE.Vector3 | null>(null);
-  const captureCountdown = useRef(-1);
-
-  useEffect(() => {
-    onReady({
-      resetCamera: () => {
-        if (homeCamPos.current && homeTarget.current) {
-          cameraApi.current?.animate(homeTarget.current, homeCamPos.current, ANIM_DURATION_S);
-        } else {
-          bounds.refresh().fit();
-        }
-      },
-    });
-  }, [bounds, onReady, cameraApi]);
-
-  const { data: drillholes } = useDrillholes();
-  const { data: metadata } = useMetadata();
-
-  useEffect(() => {
-    if (!drillholes || !metadata) return;
-    captureCountdown.current = 90;
-  }, [drillholes, metadata]);
-
-  useFrame(({ camera }) => {
-    if (captureCountdown.current <= 0) return;
-    captureCountdown.current--;
-    if (captureCountdown.current === 0) {
-      homeCamPos.current = camera.position.clone();
-      const dir = new THREE.Vector3();
-      camera.getWorldDirection(dir);
-      homeTarget.current = camera.position.clone().add(dir.multiplyScalar(500));
-    }
-  });
-
-  if (!drillholes || !metadata) return null;
-
-  return <DrillholeGroup drillholes={drillholes} metadata={metadata} />;
-}
+import { buildGoogleMapsUrl } from '../utils/googleMaps';
 
 function GradeCloudLayer() {
   const { data: gradeEstimation } = useGradeEstimation();
@@ -246,16 +78,6 @@ function SceneSetup({ onReady }: { onReady: (api: { resetCamera: () => void }) =
       <GradeCloudLayer />
     </>
   );
-}
-
-function buildGoogleMapsUrl(points: { latitude: number; longitude: number }[]): string {
-  if (points.length === 0) return 'https://www.google.com/maps';
-  const stops = points.map((p) => `${p.latitude},${p.longitude}`).join('/');
-  const lats = points.map((p) => p.latitude);
-  const lons = points.map((p) => p.longitude);
-  const centLat = (Math.min(...lats) + Math.max(...lats)) / 2;
-  const centLon = (Math.min(...lons) + Math.max(...lons)) / 2;
-  return `https://www.google.com/maps/dir/${stops}/@${centLat},${centLon},15z/data=!4m2!4m1!3e2`;
 }
 
 export function Scene() {
