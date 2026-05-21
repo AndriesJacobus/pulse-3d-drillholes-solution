@@ -19,13 +19,10 @@ import { Tooltip } from './Tooltip';
 import { useStore } from '../store/useStore';
 import { buildGoogleMapsUrl } from '../utils/googleMaps';
 
-class SceneErrorBoundary extends Component<
-  { children: ReactNode },
-  { hasError: boolean }
-> {
+class SceneErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false };
 
-  static getDerivedStateFromError(_: Error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
@@ -37,9 +34,7 @@ class SceneErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <div className="flex h-full items-center justify-center" data-testid="error">
-          <span className="text-red-400">
-            3D rendering failed. Try refreshing the page.
-          </span>
+          <span className="text-red-400">3D rendering failed. Try refreshing the page.</span>
         </div>
       );
     }

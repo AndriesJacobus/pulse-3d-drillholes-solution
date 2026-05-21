@@ -126,12 +126,7 @@ export function PdfViewer() {
         </button>
       </div>
       <div className="relative flex-1" style={{ minHeight: '350px' }}>
-        <object
-          key={pdfPage}
-          data={url}
-          type="application/pdf"
-          className="h-full w-full border-0"
-        >
+        <object key={pdfPage} data={url} type="application/pdf" className="h-full w-full border-0">
           <a
             href={url}
             target="_blank"

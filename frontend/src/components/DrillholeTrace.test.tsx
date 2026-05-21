@@ -50,9 +50,7 @@ describe('DrillholeTrace interaction', () => {
   test('clicking the label sets selectedHole in the store', async () => {
     const user = userEvent.setup();
 
-    render(
-      <DrillholeTrace hole={mockHole} colourScale={colourScale} />,
-    );
+    render(<DrillholeTrace hole={mockHole} colourScale={colourScale} />);
 
     const label = screen.getByText('CVEX005');
     await user.click(label);
@@ -63,9 +61,7 @@ describe('DrillholeTrace interaction', () => {
   test('selected hole is visually distinguished', () => {
     useStore.setState({ selectedHole: mockHole });
 
-    render(
-      <DrillholeTrace hole={mockHole} colourScale={colourScale} />,
-    );
+    render(<DrillholeTrace hole={mockHole} colourScale={colourScale} />);
 
     const label = screen.getByText('CVEX005');
     expect(label.className).toContain('bg-accent');
@@ -87,9 +83,7 @@ describe('DrillholeTrace interaction', () => {
       },
     });
 
-    render(
-      <DrillholeTrace hole={mockHole} colourScale={colourScale} />,
-    );
+    render(<DrillholeTrace hole={mockHole} colourScale={colourScale} />);
 
     await user.click(screen.getByText('CVEX005'));
 
