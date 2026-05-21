@@ -22,6 +22,7 @@ test.describe('Drillhole Viewer', () => {
 
     const infoPanel = page.getByTestId('info-panel');
     await expect(infoPanel).toBeVisible({ timeout: 5_000 });
+    await expect(infoPanel).not.toHaveText(/Click a drillhole to inspect/);
   });
 
   test('API health endpoint responds through the proxy', async ({ request }) => {

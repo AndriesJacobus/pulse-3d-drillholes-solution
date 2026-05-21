@@ -207,7 +207,7 @@ Playwright's `webServer` config starts both backend (uvicorn) and frontend (vite
 | `InfoPanel.test.tsx` | 7 | Empty state, hole details, intercepts, barren message, PDF links |
 | `GradeLegend.test.tsx` | 4 | Min/max labels, colour stops count, commodity label, background colours |
 | `Header.test.tsx` | 3 | Project name from metadata, hole/intercept counts, fallback title |
-| `Interaction.test.tsx` | 3 | Click-to-select, deselect on miss, camera fly-to on selection |
+| `DrillholeTrace.test.tsx` | 3 | Click-to-select, deselect on miss, camera fly-to on selection |
 
 ## Interaction and Grade Estimation (Phase 3)
 

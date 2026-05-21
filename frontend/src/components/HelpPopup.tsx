@@ -42,9 +42,10 @@ export function HelpPopup() {
   }, [open, dismiss]);
 
   return (
-    <>
+    <div ref={popupRef}>
       <button
         onClick={() => setOpen(!open)}
+        aria-label="Help"
         className={`rounded px-2.5 py-1.5 text-xs transition-colors ${
           open
             ? 'bg-blue-900/60 text-blue-200'
@@ -54,10 +55,7 @@ export function HelpPopup() {
         ?
       </button>
       {open && (
-        <div
-          ref={popupRef}
-          className="absolute right-12 top-3 z-50 w-56 rounded bg-bg-raised/95 p-3 shadow-lg backdrop-blur-sm"
-        >
+        <div className="absolute right-12 top-3 z-50 w-56 rounded bg-bg-raised/95 p-3 shadow-lg backdrop-blur-sm">
           <div className="mb-2 text-xs font-medium text-text-primary">Controls</div>
           <table className="w-full text-[11px]">
             <tbody>
@@ -88,6 +86,6 @@ export function HelpPopup() {
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 }
