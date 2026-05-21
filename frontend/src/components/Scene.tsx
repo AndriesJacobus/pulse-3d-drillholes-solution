@@ -1,4 +1,5 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, Component } from 'react';
+import type { ReactNode, ErrorInfo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Bounds } from '@react-three/drei';
 import { Suspense } from 'react';
@@ -15,8 +16,32 @@ import {
   useMetadata,
 } from '../hooks/useDrillholes';
 import { Tooltip } from './Tooltip';
+import { HelpPopup } from './HelpPopup';
 import { useStore } from '../store/useStore';
 import { buildGoogleMapsUrl } from '../utils/googleMaps';
+
+class SceneErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Scene render error:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex h-full items-center justify-center" data-testid="render-error">
+          <span className="text-red-400">3D rendering failed. Try refreshing the page.</span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function GradeCloudLayer() {
   const { data: gradeEstimation } = useGradeEstimation();
@@ -102,7 +127,7 @@ export function Scene() {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full items-center justify-center" data-testid="loading">
         <span className="text-text-secondary">Loading drillhole data...</span>
       </div>
     );
@@ -110,7 +135,7 @@ export function Scene() {
 
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full items-center justify-center" data-testid="load-error">
         <span className="text-red-400">Failed to load data. Is the backend running?</span>
       </div>
     );
@@ -119,7 +144,7 @@ export function Scene() {
   if (!drillholes || !metadata) return null;
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full" data-testid="scene">
       <div
         className="absolute inset-0"
         style={{
@@ -127,13 +152,15 @@ export function Scene() {
             'linear-gradient(to bottom, #4a90c4 0%, #0f0d0b 40%, #0f0d0b 60%, #1a1008 100%)',
         }}
       />
-      <Canvas
-        camera={{ position: [200, 200, 200], fov: 50, near: 0.1, far: 10000 }}
-        style={{ background: 'transparent' }}
-        onPointerMissed={handleMissed}
-      >
-        <SceneSetup onReady={handleReady} />
-      </Canvas>
+      <SceneErrorBoundary>
+        <Canvas
+          camera={{ position: [200, 200, 200], fov: 50, near: 0.1, far: 10000 }}
+          style={{ background: 'transparent' }}
+          onPointerMissed={handleMissed}
+        >
+          <SceneSetup onReady={handleReady} />
+        </Canvas>
+      </SceneErrorBoundary>
       <div className="absolute right-3 top-3 flex flex-col gap-1.5">
         <Tooltip text="Reset camera to fit all holes">
           <button
@@ -179,6 +206,7 @@ export function Scene() {
             Google Maps
           </a>
         </Tooltip>
+        <HelpPopup />
       </div>
       {showGradeCloud && gradeEstimation && (
         <div className="absolute bottom-3 right-3 max-w-56 rounded bg-bg-raised/90 px-2.5 py-1.5 text-[10px] leading-tight text-text-muted">

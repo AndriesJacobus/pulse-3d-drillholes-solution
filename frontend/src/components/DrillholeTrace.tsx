@@ -110,6 +110,7 @@ export function DrillholeTrace({ hole, colourScale }: DrillholeTraceProps) {
 
       <Html position={collarPos} center style={{ pointerEvents: 'auto', cursor: 'pointer' }}>
         <span
+          data-testid="collar-label"
           className={`whitespace-nowrap rounded px-1 py-0.5 font-mono text-[9px] hover:bg-amber-500/80 hover:text-black ${
             isSelected ? 'bg-accent/90 text-bg-base font-medium' : 'bg-black/70 text-text-secondary'
           }`}

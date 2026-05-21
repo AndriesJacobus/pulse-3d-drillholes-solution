@@ -10,8 +10,10 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY app/ app/
 COPY data/ data/
 
-RUN useradd -r appuser
+RUN useradd -r -m appuser
 USER appuser
+
+ENV UV_CACHE_DIR=/tmp/uv-cache
 
 EXPOSE 8080
 

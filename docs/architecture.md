@@ -182,9 +182,22 @@ Two stores, no mixing:
 
 Gold grades are mapped to the YlOrRd (yellow-orange-red) sequential colour ramp from d3-scale-chromatic. The scale uses a **log domain** because the grade distribution is heavily skewed: 12 of 14 intercepts fall below 5.0 g/t, but the range extends to 10.8. A linear scale compresses the visual range. Log scaling spreads differentiation across where the data actually sits.
 
-### Testing
+### E2E tests (Playwright)
 
-39 tests across 6 suites:
+4 browser tests using Playwright (Chromium):
+
+| Test | What |
+|------|------|
+| Scene renders | Page loads, loading indicator clears, Canvas is visible |
+| Collar click | Click a collar label, info panel opens |
+| API health proxy | `/api/health` returns 200 through the preview server |
+| Drillholes count | `/api/drillholes` returns 31 holes |
+
+Playwright's `webServer` config starts both backend (uvicorn) and frontend (vite preview) automatically, polls ports, and tears down after tests. Run with `npm run test:e2e`.
+
+### Unit tests (Vitest)
+
+42 tests across 7 suites:
 
 | Suite | Count | What |
 |-------|-------|------|
@@ -194,6 +207,7 @@ Gold grades are mapped to the YlOrRd (yellow-orange-red) sequential colour ramp 
 | `InfoPanel.test.tsx` | 7 | Empty state, hole details, intercepts, barren message, PDF links |
 | `GradeLegend.test.tsx` | 4 | Min/max labels, colour stops count, commodity label, background colours |
 | `Header.test.tsx` | 3 | Project name from metadata, hole/intercept counts, fallback title |
+| `DrillholeTrace.test.tsx` | 3 | Click-to-select, deselect on miss, camera fly-to on selection |
 
 ## Interaction and Grade Estimation (Phase 3)
 
@@ -247,3 +261,25 @@ Per-hole links in the InfoPanel use the `/maps/place/` format, which drops a pin
 ### Visual orientation
 
 A CSS gradient behind the transparent Canvas (dark blue at top, earthy brown at bottom) provides sky/ground orientation with zero GPU cost. Button tooltips (custom component, 300ms delay) give discoverability to the scene controls.
+
+## Deploy and Polish (Phase 4)
+
+### Infrastructure
+
+Firebase Hosting serves the frontend static build and rewrites `/api/**` to Cloud Run (`australia-southeast1`). This means the frontend uses the same relative API paths (`/api/health`, `/api/drillholes`) in both development (Vite proxy) and production (Firebase rewrite). Zero environment-specific code paths.
+
+### Error boundary
+
+A class component (`SceneErrorBoundary`) wraps the R3F Canvas. WebGL failures (lost context, shader compilation errors) are caught and render a recovery message instead of blanking the page. React error boundaries require `getDerivedStateFromError`, which is class-only.
+
+### Help popup
+
+First-visit help popup shows controls reference (orbit, zoom, pan) and interaction guide (select, deselect, cluster zoom). Dismissed state persists via localStorage. Closes on Escape key or click outside. Uses `useCallback` for a stable dismiss reference in the effect cleanup.
+
+### Scripts
+
+`scripts/setup.sh` validates prerequisites (Python 3.12+, uv, Node 18+), installs dependencies, runs lint and tests, builds the frontend. Flags: `--skip-tests`, `--backend-only`, `--frontend-only`.
+
+`scripts/deploy.sh` runs pre-flight gates (lint, tests, build, git status), deploys backend to Cloud Run, deploys frontend to Firebase Hosting, runs smoke tests (health check, drillhole count). Targets: `backend`, `frontend`, `all`.
+
+Both source `scripts/helpers.sh` for coloured terminal output, section numbering, and confirmation prompts.

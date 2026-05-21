@@ -53,7 +53,12 @@ export function CameraController({ apiRef }: { apiRef: React.RefObject<CameraApi
   const onCompleteRef = useRef<(() => void) | null>(null);
 
   const beginAnimation = useCallback(
-    (target: THREE.Vector3, camDest: THREE.Vector3 | null, dur?: number, onComplete?: () => void) => {
+    (
+      target: THREE.Vector3,
+      camDest: THREE.Vector3 | null,
+      dur?: number,
+      onComplete?: () => void,
+    ) => {
       if (!controlsRef.current) return;
       startTarget.current.copy(controlsRef.current.target);
       endTarget.current.copy(target);
@@ -89,7 +94,10 @@ export function CameraController({ apiRef }: { apiRef: React.RefObject<CameraApi
       selectedHole.collar.z,
     );
     const extent = traceExtent(selectedHole.trace);
-    const zoomDist = Math.min(HOLE_ZOOM_DISTANCE_MAX, Math.max(HOLE_ZOOM_DISTANCE_MIN, extent * 2.5));
+    const zoomDist = Math.min(
+      HOLE_ZOOM_DISTANCE_MAX,
+      Math.max(HOLE_ZOOM_DISTANCE_MIN, extent * 2.5),
+    );
     const camPos = controlsRef.current.object.position;
     const dir = camPos.clone().sub(controlsRef.current.target).normalize();
     const dest = collar.clone().add(dir.multiplyScalar(zoomDist));

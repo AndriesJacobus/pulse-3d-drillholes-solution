@@ -186,3 +186,31 @@ Extended the Zustand FocusTarget interface with an optional `onArrive` callback.
 ### Sky gradient and zoom range
 
 Changed the scene background gradient from near-black navy (#0a1628) to natural sky blue (#4a90c4) for realism. Increased OrbitControls maxDistance from 2000 to 10000 (matching the camera far plane) so users can zoom out far enough to see the full site in context.
+
+---
+
+## Phase 4: Deploy + Polish
+
+### Firebase Hosting with Cloud Run rewrite
+
+Firebase Hosting serves the frontend and rewrites `/api/**` to Cloud Run. The frontend uses the same relative API paths in dev (Vite proxy) and production (Firebase rewrite), so there are no environment conditionals in the client code. If the Cloud Run deploy fails, the frontend still deploys but API calls 404. This is an acceptable failure mode for a stretch goal.
+
+### Playwright JS, not Python
+
+The Phase 4 spec originally considered `pytest-playwright` running from the backend. This was wrong: it couples frontend tests to the Python environment. Playwright JS integrates with the existing npm toolchain. The assessor runs `npm run test:e2e` and gets browser tests without touching Python.
+
+### E2E tests focus on DOM and API, not 3D pixels
+
+3D pixel testing is fragile across GPUs and renderers. The E2E tests verify: scene container renders, collar label click opens info panel, API health check through the proxy, drillholes endpoint returns 31 holes. These are stable across environments and catch real integration failures.
+
+### Cloud Run memory and startup
+
+512Mi memory with min-instances 0. The container starts in ~2 seconds (CSV parsing + GPR fit). Cold starts are acceptable for a demo. `uv` cache is redirected to `/tmp/uv-cache` because the non-root container user's home directory would not be writable otherwise.
+
+### Help popup with localStorage dismissal
+
+First-time visitors see controls reference automatically. Once dismissed, localStorage prevents it from reappearing. This replaces a README-only controls description with an in-app guide. No external dependency, no cookie consent needed.
+
+### Class component error boundary
+
+React error boundaries require `getDerivedStateFromError`, which is class-only. The boundary wraps the R3F Canvas to catch WebGL failures. Inline in Scene.tsx since it is used exactly once.

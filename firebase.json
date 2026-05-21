@@ -1,0 +1,20 @@
+{
+  "hosting": {
+    "site": "ajdp-pulse-drillholes",
+    "public": "frontend/dist",
+    "ignore": ["firebase.json", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "pulse-drillhole-api",
+          "region": "australia-southeast1"
+        }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

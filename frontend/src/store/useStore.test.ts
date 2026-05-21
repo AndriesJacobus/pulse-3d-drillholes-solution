@@ -10,6 +10,8 @@ const mockHole: Drillhole = {
   total_depth: 120,
   dip: -60,
   azimuth: 20,
+  latitude: -31.5,
+  longitude: 121.5,
   collar_page: null,
   intercepts: [],
 };
