@@ -24,6 +24,7 @@ Thumbs.db
 # Caches
 .pytest_cache/
 *.log
+.firebase/
 
 # Test artifacts
 test-results/
