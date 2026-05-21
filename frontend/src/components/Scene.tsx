@@ -16,6 +16,7 @@ import {
   useMetadata,
 } from '../hooks/useDrillholes';
 import { Tooltip } from './Tooltip';
+import { HelpPopup } from './HelpPopup';
 import { useStore } from '../store/useStore';
 import { buildGoogleMapsUrl } from '../utils/googleMaps';
 
@@ -205,6 +206,7 @@ export function Scene() {
             Google Maps
           </a>
         </Tooltip>
+        <HelpPopup />
       </div>
       {showGradeCloud && gradeEstimation && (
         <div className="absolute bottom-3 right-3 max-w-56 rounded bg-bg-raised/90 px-2.5 py-1.5 text-[10px] leading-tight text-text-muted">
