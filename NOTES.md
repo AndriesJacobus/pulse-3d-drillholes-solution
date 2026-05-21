@@ -8,7 +8,7 @@
 |-------|------|-------|
 | Backend | ~1h | FastAPI, data models, desurveying engine, data quality, tests |
 | Frontend + 3D | ~1.5h | React + R3F, grade colouring, 3D scene, info panel, 20 tests |
-| Interaction + UX | ~2h | Camera controls, grade estimation (GPR), hover, PDF viewer, pixelation transitions, 48 FE + 133 BE tests |
+| Interaction + UX | ~2h | Camera controls, grade estimation (GPR), hover, PDF viewer, pixelation transitions, 42 FE + 133 BE tests |
 | Deploy + polish | ~1h | Cloud Run + Firebase, Playwright E2E, setup/deploy scripts, help popup |
 | **Total implementation** | **~5.5h** | |
 
