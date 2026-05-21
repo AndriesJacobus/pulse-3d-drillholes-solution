@@ -68,6 +68,22 @@ Each drillhole includes:
 
 The `/api/metadata` endpoint returns the geographic centroid (in original MGA coordinates, not scene-relative) for reference, along with grade range bounds for the colour scale.
 
+## Spatial clustering
+
+After desurveying, collar 2D positions (east, north) are clustered using DBSCAN (eps=100m, min_samples=2). The algorithm groups holes that sit within 100m of each other into clusters without requiring a pre-specified count. For the real dataset, this produces 4 clusters from 30 holes. CVEX028 is classified as noise (2.6km from the nearest group) and excluded from the cluster results.
+
+Each cluster record includes:
+- **Centroid:** mean position of member collars (both scene coordinates and lat/lon)
+- **Radius:** maximum distance from any member collar to the centroid
+- **Membership:** list of hole codes in the cluster
+- **Label:** "Cluster N" format (1-indexed)
+
+The frontend uses these for navigation (click cluster to zoom) and Google Maps integration (cluster centroids as waypoints).
+
+## Grade estimation pipeline
+
+Intercept midpoints (with grade) and barren hole positions (grade=0 at 20m intervals) are extracted as sample points. Grades are log-transformed for numerical stability, then a Gaussian Process Regressor with RBF kernel is fitted. A 10m regular grid is built, filtered to within 50m of the nearest sample. The GPR predicts mean and standard deviation at each grid point, which are back-transformed, clamped, and returned as voxels with opacity derived from uncertainty and distance fade.
+
 ## Quality pipeline
 
 Two tiers of data quality analysis:

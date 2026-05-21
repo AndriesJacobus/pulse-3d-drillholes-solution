@@ -108,6 +108,8 @@ class DrillholeResponse(BaseModel):
     total_depth: float
     dip: float
     azimuth: float
+    latitude: float
+    longitude: float
     collar_page: int | None = None
     intercepts: list[InterceptResponse]
 
@@ -131,6 +133,43 @@ class DataQualityResponse(BaseModel):
     findings: list[QualityFindingResponse]
 
 
+class GradeVoxel(BaseModel):
+    x: float
+    y: float
+    z: float
+    grade: float
+    uncertainty: float
+    opacity: float
+
+
+class GradeEstimationResponse(BaseModel):
+    voxels: list[GradeVoxel]
+    cell_size: float
+    method: str
+    sample_count: int
+    disclaimer: str
+
+
+class ClusterResponse(BaseModel):
+    id: int
+    label: str
+    prospect: str
+    centroid: Point3D
+    radius: float
+    hole_codes: list[str]
+    latitude: float
+    longitude: float
+
+
+class SceneBounds(BaseModel):
+    min_x: float
+    max_x: float
+    min_y: float
+    max_y: float
+    min_z: float
+    max_z: float
+
+
 class MetadataResponse(BaseModel):
     project_name: str
     prospects: list[str]
@@ -139,3 +178,4 @@ class MetadataResponse(BaseModel):
     grade_range: dict[str, float]
     centroid: GeoCentroid
     commodities: list[str]
+    scene_bounds: SceneBounds | None = None

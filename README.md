@@ -16,7 +16,14 @@ uv sync
 uv run uvicorn app.main:app --reload
 ```
 
-The API runs on `http://localhost:8000`. Interactive docs at `/docs`.
+Or use the auto-port launcher, which finds an available port starting from 8000:
+
+```bash
+cd backend
+uv run python run.py
+```
+
+The API runs on `http://localhost:8000` (or the next available port if 8000 is taken). Interactive docs at `/docs`.
 
 ### Endpoints
 
@@ -26,7 +33,9 @@ The API runs on `http://localhost:8000`. Interactive docs at `/docs`.
 | `GET /api/metadata` | Project info, grade range, prospects |
 | `GET /api/drillholes` | All holes with 3D traces and intercepts |
 | `GET /api/source-pdf` | Original ASX announcement PDF |
+| `GET /api/clusters` | Spatial clusters with centroids and hole membership |
 | `GET /api/data-quality` | Data quality findings |
+| `GET /api/grade-estimation` | GPR-interpolated grade voxels with uncertainty |
 
 ### Tests
 
@@ -35,7 +44,7 @@ cd backend
 uv run pytest
 ```
 
-93 tests covering desurveying maths, CSV parsing, data quality checks, API endpoints, and performance budgets.
+133 tests covering desurveying maths, CSV parsing, data quality checks, grade estimation (GPR), spatial clustering, API endpoints, and performance budgets.
 
 ### Docker
 
@@ -62,7 +71,7 @@ cd frontend
 npm run test
 ```
 
-20 tests covering colour scale mapping, API client, and state management.
+39 tests covering colour scale mapping, API client, state management, and component rendering (InfoPanel, GradeLegend, Header).
 
 ### Build
 

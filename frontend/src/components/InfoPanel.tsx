@@ -1,22 +1,22 @@
 import { useStore } from '../store/useStore';
-import { getSourcePdfUrl } from '../api/client';
 
 export function InfoPanel() {
   const selectedHole = useStore((s) => s.selectedHole);
   const selectedIntercept = useStore((s) => s.selectedIntercept);
+  const setPdfPage = useStore((s) => s.setPdfPage);
 
   if (!selectedHole) {
     return (
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-4">
+      <div className="shrink-0 overflow-y-auto bg-bg-surface p-4">
         <p className="text-sm text-text-muted" data-testid="info-panel">
           Click a drillhole to inspect
         </p>
-      </aside>
+      </div>
     );
   }
 
   return (
-    <aside className="w-80 shrink-0 overflow-y-auto border-l border-border-default bg-bg-surface p-4">
+    <div className="shrink-0 overflow-y-auto bg-bg-surface p-4">
       <div data-testid="info-panel">
         <h2 className="font-mono text-base font-semibold text-accent">{selectedHole.hole_code}</h2>
 
@@ -58,14 +58,12 @@ export function InfoPanel() {
                       <span className="text-text-muted">{ic.commodity}</span>
                     </div>
                     {ic.page && (
-                      <a
-                        href={getSourcePdfUrl(ic.page)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-0.5 inline-block text-[10px] text-blue-400 underline"
+                      <button
+                        onClick={() => setPdfPage(ic.page)}
+                        className="mt-0.5 text-[10px] text-blue-400 underline hover:text-blue-300"
                       >
                         Source (p.{ic.page})
-                      </a>
+                      </button>
                     )}
                   </li>
                 );
@@ -76,17 +74,25 @@ export function InfoPanel() {
           <p className="mt-4 text-xs text-text-muted">No significant intercepts</p>
         )}
 
-        {selectedHole.collar_page && (
+        <div className="mt-3 flex flex-col gap-1">
+          {selectedHole.collar_page && (
+            <button
+              onClick={() => setPdfPage(selectedHole.collar_page)}
+              className="text-left text-xs text-blue-400 underline hover:text-blue-300"
+            >
+              View source PDF (p.{selectedHole.collar_page})
+            </button>
+          )}
           <a
-            href={getSourcePdfUrl(selectedHole.collar_page)}
+            href={`https://www.google.com/maps/search/${selectedHole.latitude},${selectedHole.longitude}/@${selectedHole.latitude},${selectedHole.longitude},17z`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 inline-block text-xs text-blue-400 underline"
+            className="inline-block text-xs text-blue-400 underline"
           >
-            View source PDF (p.{selectedHole.collar_page})
+            View on Google Maps
           </a>
-        )}
+        </div>
       </div>
-    </aside>
+    </div>
   );
 }

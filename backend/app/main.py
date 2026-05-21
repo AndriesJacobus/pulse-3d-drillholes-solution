@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
+from app.clustering import compute_clusters
 from app.config import (
     COLLARS_PATH,
     CORS_ORIGINS,
@@ -19,16 +20,20 @@ from app.desurvey import (
     desurvey_hole,
     to_scene_coords,
 )
+from app.estimation import compute_grade_estimation
 from app.loader import load_collars, load_intercepts
 from app.models import (
+    ClusterResponse,
     CollarRecord,
     DataQualityResponse,
     DrillholeResponse,
     GeoCentroid,
+    GradeEstimationResponse,
     InterceptRecord,
     InterceptResponse,
     MetadataResponse,
     QualityFindingResponse,
+    SceneBounds,
 )
 from app.quality import QualityReport, run_quality_report
 
@@ -86,6 +91,8 @@ def build_drillhole_responses(
                 total_depth=collar.total_depth,
                 dip=collar.dip,
                 azimuth=collar.azimuth,
+                latitude=collar.latitude,
+                longitude=collar.longitude,
                 collar_page=collar.collar_page,
                 intercepts=intercept_responses,
             )
@@ -98,8 +105,26 @@ def build_metadata(
     collars: list[CollarRecord],
     intercepts: list[InterceptRecord],
     centroid: tuple[float, float, float],
+    drillholes: list[DrillholeResponse],
 ) -> MetadataResponse:
     grades = [i.grade for i in intercepts]
+
+    all_points = []
+    for dh in drillholes:
+        all_points.append(dh.collar)
+        all_points.extend(dh.trace)
+
+    scene_bounds = None
+    if all_points:
+        scene_bounds = SceneBounds(
+            min_x=min(p.x for p in all_points),
+            max_x=max(p.x for p in all_points),
+            min_y=min(p.y for p in all_points),
+            max_y=max(p.y for p in all_points),
+            min_z=min(p.z for p in all_points),
+            max_z=max(p.z for p in all_points),
+        )
+
     return MetadataResponse(
         project_name=PROJECT_NAME,
         prospects=sorted({c.prospect for c in collars}),
@@ -111,6 +136,7 @@ def build_metadata(
         },
         centroid=GeoCentroid(east=centroid[0], north=centroid[1], rl=centroid[2]),
         commodities=sorted({i.commodity_symbol for i in intercepts}),
+        scene_bounds=scene_bounds,
     )
 
 
@@ -123,8 +149,14 @@ async def lifespan(app: FastAPI):
     logger.info("Loaded %d collars, %d intercepts", len(collars), len(intercepts))
 
     app.state.drillholes = build_drillhole_responses(collars, intercepts, centroid)
-    app.state.metadata = build_metadata(collars, intercepts, centroid)
+    app.state.metadata = build_metadata(collars, intercepts, centroid, app.state.drillholes)
     app.state.quality_report = run_quality_report(collars, intercepts)
+    app.state.grade_estimation = compute_grade_estimation(collars, intercepts, centroid)
+    app.state.grade_sample_count = len(intercepts)
+    app.state.clusters = compute_clusters(collars, centroid)
+
+    logger.info("Grade estimation: %d voxels", len(app.state.grade_estimation))
+    logger.info("Clusters: %d", len(app.state.clusters))
 
     yield
 
@@ -158,7 +190,32 @@ async def get_drillholes(request: Request):
 async def get_source_pdf():
     if not PDF_PATH.exists():
         raise HTTPException(status_code=404, detail="Source PDF not found")
-    return FileResponse(PDF_PATH, media_type="application/pdf", filename="source.pdf")
+    return FileResponse(
+        PDF_PATH,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline"},
+    )
+
+
+@app.get("/api/grade-estimation", response_model=GradeEstimationResponse)
+async def get_grade_estimation(request: Request):
+    from app.estimation import CELL_SIZE_M
+
+    return GradeEstimationResponse(
+        voxels=request.app.state.grade_estimation,
+        cell_size=CELL_SIZE_M,
+        method="Gaussian Process Regression (RBF kernel)",
+        sample_count=request.app.state.grade_sample_count,
+        disclaimer=(
+            "Estimated from 14 intercepts using GPR interpolation. "
+            "This is a visual aid for exploration, not a resource estimate."
+        ),
+    )
+
+
+@app.get("/api/clusters", response_model=list[ClusterResponse])
+async def get_clusters(request: Request):
+    return request.app.state.clusters
 
 
 @app.get("/api/data-quality", response_model=DataQualityResponse)

@@ -96,3 +96,93 @@ Tailwind v4 uses CSS-native `@theme` for tokens rather than a JavaScript config 
 ### Frontend receives pre-computed geometry
 
 The frontend does zero geometry maths. All 3D coordinates arrive pre-computed from the backend in the Three.js Y-up coordinate system. This keeps the rendering layer thin: map over the data, create `Line` and `mesh` components at the given positions. No desurveying, no coordinate transforms, no axis mapping on the client.
+
+---
+
+## Phase 3: Interaction + Grade Estimation
+
+### Smoothstep camera animation, not lerp or instant snap
+
+Clicking a hole animates the camera to the collar position over 1 second using smoothstep easing (HOLE_ZOOM_DISTANCE=350 units). Clicking a cluster zooms to fit it (radius * 4). The earlier implementation used per-frame lerp (0.08), which produced variable-speed animation that felt floaty at large distances. Smoothstep gives consistent timing with natural acceleration and deceleration. Snapping instantly was ruled out because it is disorienting: the user loses spatial context.
+
+### Invisible cylinder hit meshes for click targets
+
+drei's `Line` component uses `LineSegments2`, which does not participate in Three.js's standard raycaster. Alternatives considered: patching the Line's `computeLineDistances`, using `MeshLine`, or switching to tube geometry. Invisible cylinders (radius 1.5m traces, 2m intercepts) are simpler, performant, and composable with R3F's event system. They also enable hover events.
+
+### Background click to deselect via onPointerMissed
+
+R3F's `onPointerMissed` on the `Canvas` fires only when the click hits no 3D object. This cleanly handles deselection without needing to check "did I click empty space?" manually. The alternative was a transparent background plane, which would interfere with OrbitControls.
+
+### GPR over kriging for grade estimation
+
+Kriging is the industry standard for mineral resource estimation but needs 30+ samples for reliable variogram fitting. With 14 intercepts, variogram estimation is unreliable. GPR with an RBF kernel is mathematically equivalent to kriging with a Gaussian variogram, but kernel hyperparameters are optimised via maximum likelihood rather than manual variogram selection. The distinction matters for a mining data company: presenting kriging results from 14 samples would suggest poor geostatistical judgement.
+
+### Barren holes as zero-grade constraints
+
+17 holes have no intercepts above the cutoff. Including these as zero-grade samples at regular intervals constrains the interpolation: the model learns where gold is absent, not just where it is present. Without this, the GPR would extrapolate high grades into barren zones.
+
+### Log-transform grades before GPR fitting
+
+The grade distribution is heavily skewed (0.6 to 10.8 g/t). Log-transforming before fitting improves GPR performance by making the distribution more symmetric. The back-transform (exponentiation) can produce unrealistically high values in extrapolated regions, so we cap at 1.5x the observed maximum.
+
+### InstancedMesh for voxel rendering
+
+A 10m grid within 50m of data produces ~2600 voxels. InstancedMesh renders these in a single draw call with per-instance colour via `setColorAt()`. Alternatives: individual meshes (2600 draw calls, poor performance), Points (less visual information), volume rendering (custom GLSL, too complex for the time budget).
+
+### Grade cloud off by default with disclaimer
+
+The estimation is speculative. Showing it by default would give false confidence. The toggle ("Show grades"/"Hide grades") keeps it secondary to the drillhole data. The disclaimer text comes from the backend response, so the API itself communicates the limitation.
+
+### DBSCAN spatial clustering for drill hole groups
+
+31 holes form visible clusters on the map. DBSCAN (density-based) on 2D collar coordinates (east, north) finds clusters without a pre-specified count. eps=100m and min_samples=2 produces 4 clusters from 30 holes. CVEX028 (2.6km spatial outlier) is excluded as noise rather than promoted to a singleton.
+
+The eps was increased from 50 to 100 because the original value fragmented natural groupings into too many small clusters. At 100m, the four clusters match the visual groupings in the data. Noise points are excluded rather than promoted to singletons because singleton "clusters" added visual clutter without providing useful navigation. Cluster labels use the format "Cluster N" rather than prospect names, since prospect assignment in the source data is unreliable (CVEX028 is assigned to Cheer but sits 2.6km away). Backend computes clusters at startup and serves via `/api/clusters`.
+
+### Distance-adaptive click areas
+
+At default cylinder radius (1.5m traces, 2m intercepts), distant holes are nearly impossible to click. `useFrame` scales hit cylinders by up to 6x based on camera distance. At 50m (close), the radius stays at 1x. At 1000m+, it reaches 6x. This makes far-away holes clickable without affecting precision when zoomed in.
+
+### PDF viewer stacks below InfoPanel (not replacing it)
+
+Cross-referencing the 3D scene with the original announcement is the primary use case for the PDF link. The initial implementation replaced InfoPanel with PdfViewer, but this forced users to close the PDF to see hole details again. The current layout keeps InfoPanel always visible and stacks the PdfViewer below it when active. This way, hole details and the source document are visible simultaneously. The `#page=N` fragment navigates to the correct page.
+
+### Multi-tile satellite map with extended ground plane
+
+The initial single-tile map at zoom 15 covered only ~1km, while the dataset spans 10km (CVEX028 outlier). Rewrote to compute a tile grid that auto-selects zoom level (max 12 tiles). A 20km brown ground plane extends behind the tiles, providing continuous ground-level context. All materials use `DoubleSide` rendering so they remain visible when orbiting below the surface.
+
+### Google Maps integration with satellite view
+
+Per-hole links in the InfoPanel use `/maps/place/` format, which drops a pin at the hole's coordinates. The scene toolbar button uses `/maps/dir/` format with all cluster centroids as waypoints, showing labelled pins (A through D) for the four clusters. Satellite mode is appropriate for mining exploration (terrain and vegetation visibility).
+
+### Auto port selection for dev ergonomics
+
+`run.py` scans from port 8000 upward to find an available port, then passes it to uvicorn. The frontend's `vite.config.ts` reads `API_PORT` from the environment and sets `strictPort: false`, so both services find open ports without manual configuration. The CORS whitelist includes ports 5173 through 5175 to accommodate Vite's port fallback. This avoids the "port already in use" friction when running multiple dev sessions.
+
+### Clickable collar labels for direct hole navigation
+
+Collar labels in `DrillholeTrace` are clickable: clicking a label selects the hole and zooms the camera to it. This is a shortcut past the invisible-cylinder hit mesh, which is harder to target at distance. Combined with the distance-adaptive click areas, every hole is reachable at any zoom level through at least one interaction path.
+
+### Cluster label visibility tied to camera distance
+
+`ClusterMarker` labels are visible only when the camera is more than 600 units from the marker. When zoomed in close, cluster labels would overlap with individual collar labels and obstruct the view. Hiding them at close range keeps the scene clean during detailed inspection while still providing orientation when zoomed out.
+
+### CSS gradient background for spatial orientation
+
+A linear gradient behind the transparent Canvas (blue at top, brown at bottom) gives immediate sky/ground orientation. This is a CSS-only effect with zero GPU cost, unlike a Three.js skybox.
+
+### Deferred PDF updates after camera animation
+
+When clicking a hole or cluster, the camera animation runs to completion before the PDF viewer updates. Hole selection stores the target page in an `onComplete` callback on the animation system. Cluster clicks pass an `onArrive` callback via the FocusTarget store entry. This prevents the jarring experience of the side panel resizing mid-animation. Deselecting (clicking empty space) still closes the PDF immediately since no animation is involved.
+
+### Canvas pixelation transition on PDF page change
+
+When the PDF switches pages, a canvas overlay runs a genuine pixelation effect: a noise texture is drawn once, then each frame downscales it to a tiny resolution and upscales with `imageSmoothingEnabled = false` (nearest-neighbour interpolation). The resolution grows exponentially from 3px to full over 700ms while fading out in the final 35%. Only two `drawImage` calls per frame, both GPU-friendly. No external library needed.
+
+### FocusTarget onArrive callback pattern
+
+Extended the Zustand FocusTarget interface with an optional `onArrive` callback. This lets click handlers specify post-animation actions (like closing the PDF) without coupling the animation system to specific side effects. The CameraController forwards the callback to its internal animation ref and fires it when progress reaches 1.
+
+### Sky gradient and zoom range
+
+Changed the scene background gradient from near-black navy (#0a1628) to natural sky blue (#4a90c4) for realism. Increased OrbitControls maxDistance from 2000 to 10000 (matching the camera far plane) so users can zoom out far enough to see the full site in context.
