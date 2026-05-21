@@ -70,14 +70,14 @@ uv run pytest
 
 Covers desurveying maths, CSV parsing, data quality checks, grade estimation (GPR), spatial clustering, API endpoints, and performance budgets.
 
-### Frontend unit tests (42 tests)
+### Frontend unit tests (48 tests)
 
 ```bash
 cd frontend
 npm run test
 ```
 
-Covers colour scale mapping, API client, state management, and component rendering (InfoPanel, GradeLegend, Header).
+Covers colour scale mapping, API client, state management, component rendering (InfoPanel, GradeLegend, Header), and HelpPopup behaviour.
 
 ### E2E browser tests (4 tests)
 
