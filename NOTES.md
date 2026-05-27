@@ -42,7 +42,7 @@ A standalone CLI script (`scripts/analyse_data.py`) provides deeper statistical 
 
 ### Camera controls and interaction
 
-OrbitControls with a fly-to animation on selection. Clicking a hole smoothly pans the orbit target to the collar position (lerp at 0.08 per frame). Clicking empty space deselects. A "Fit all" button resets the camera to frame all holes using drei's `Bounds.refresh()`.
+OrbitControls with a fly-to animation on selection. Clicking a hole animates the camera to the collar position over 1 second using smoothstep easing. Clicking empty space deselects. A "Fit all" button resets the camera to frame all holes using drei's `Bounds.refresh()`.
 
 Hit detection uses invisible cylinder meshes alongside the visual `Line` geometry. drei's `Line` component uses `LineSegments2`, which does not participate in Three.js raycasting. The cylinders (radius 1.5m for traces, 2m for intercepts) provide reliable click and hover targets.
 
